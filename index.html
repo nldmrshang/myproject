@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>飞行任务签派中心</title>
     
+    <script>window.L_DISABLE_3D = true;</script>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -30,7 +32,6 @@
             transition: background 0.3s, color 0.3s;
         }
         
-        /* 编辑面板 */
         .editor { 
             width: 380px; background: var(--card); border-radius: 20px; padding: 25px; 
             border: 1px solid var(--border); height: 92vh; overflow-y: auto; 
@@ -38,7 +39,6 @@
         }
         .editor h2 { font-weight: 800; font-size: 20px; color: var(--primary); margin-bottom: 25px; }
 
-        /* SimBrief 导入区 */
         .sb-import-area {
             background: var(--bg); border: 2px dashed var(--accent);
             border-radius: 12px; padding: 15px; margin-bottom: 20px;
@@ -50,22 +50,23 @@
             border-radius: 6px; font-weight: 800; cursor: pointer; transition: 0.2s;
         }
         
-        /* 按钮组 */
-        .btn-group { display: flex; flex-direction: row; gap: 8px; margin-bottom: 25px; justify-content: space-between; }
+        .btn-group { display: flex; flex-direction: row; gap: 8px; margin-bottom: 25px; justify-content: space-between; flex-wrap: wrap; }
         .btn { 
             flex: 1; border: none; padding: 10px 4px; border-radius: 8px; 
             cursor: pointer; font-weight: 800; color: #fff; transition: 0.2s; font-size: 11px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05); white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); white-space: nowrap; min-width: 22%;
         }
         .add-btn { background: var(--accent); } 
         .reset-btn { background: #8b5cf6; }     
-        .export-btn { background: #10b981; }    
+        .export-btn { background: #10b981; }  
+        .html-btn { background: #f59e0b; }
 
         .btn:hover { opacity: 0.9; transform: translateY(-1px); }
 
         .leg-block { 
             background: var(--bg); padding: 20px; border-radius: 12px; 
             margin-bottom: 25px; border: 1px solid var(--border); 
+            animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         
         label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin: 12px 0 5px; letter-spacing: 1px; }
@@ -81,35 +82,73 @@
         .img-thumb-wrapper { position: relative; width: 60px; height: 60px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
         .img-thumb { width: 100%; height: 100%; object-fit: cover; }
         .del-img-btn { position: absolute; top: 2px; right: 2px; background: var(--warn); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; cursor: pointer; font-size: 12px; display:flex; align-items:center; justify-content:center;}
+        .mode-toggle { padding: 8px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-weight: 800; font-size: 12px; }
 
-        /* 预览区 */
+        @keyframes slideUpFade {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse-icon {
+            0% { transform: scale(1); box-shadow: 0 0 0 rgba(37, 99, 235, 0); }
+            50% { transform: scale(1.05); box-shadow: 0 0 15px rgba(37, 99, 235, 0.4); }
+            100% { transform: scale(1); box-shadow: 0 0 0 rgba(37, 99, 235, 0); }
+        }
+
+        .no-animation, .no-animation * {
+            animation: none !important;
+            transition: none !important;
+            opacity: 1 !important; 
+        }
+
         .preview { width: 850px; }
-        #capture-area { padding: 40px; background: var(--border); border-radius: 30px; } 
-        .card { background: var(--card); border-radius: 30px; padding: 45px; box-shadow: 0 30px 60px -12px rgba(0,0,0,0.15); position: relative; margin-bottom: 35px; color: var(--text); overflow: hidden;}
+        #capture-area { padding: 40px; background: var(--border); border-radius: 30px; transition: background 0.3s;} 
         
-        .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 25px; }
+        .card { 
+            background: var(--card); border-radius: 30px; padding: 45px; 
+            box-shadow: 0 30px 60px -12px rgba(0,0,0,0.15); position: relative; 
+            margin-bottom: 35px; color: var(--text); overflow: hidden;
+            opacity: 0; animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        .header { 
+            display: grid; grid-template-columns: 1fr auto 1fr; 
+            align-items: center; 
+            margin-bottom: 25px; 
+        }
+        .station { display: flex; flex-direction: column; }
+        .station.align-left { align-items: flex-start; text-align: left; }
+        .station.align-right { align-items: flex-end; text-align: right; }
         .icao { font-size: 70px; font-weight: 900; color: var(--text); letter-spacing: -3px; line-height: 1; margin: 0; }
         .cn-name { font-size: 20px; font-weight: 800; color: var(--accent); margin-top: 12px; }
         
-        /* 地图容器 */
-        .map-container { 
-            width: 100%; height: 480px; background: var(--bg); border-radius: 16px; 
-            margin-top: 25px; border: 1px solid var(--border); overflow: hidden; z-index: 1; position: relative;
+        .route-visual { 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 0 20px; min-width: 250px; 
         }
-        [data-theme="dark"] .map-container { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
-
-        .route-visual { flex: 1; margin: 0 30px; margin-top: 25px; display: flex; flex-direction: column; align-items: center; }
-        .plane-line-wrapper { display: flex; align-items: center; width: 100%; }
+        .plane-line-wrapper { display: flex; align-items: center; width: 100%; margin-bottom: 8px; }
         .line-segment { flex: 1; height: 2px; background: var(--border); }
         .plane-box { 
             width: 46px; height: 46px; border: 2.5px solid var(--accent); 
             border-radius: 50%; display: flex; align-items: center; justify-content: center; 
-            background: var(--card); margin: 0 10px; 
+            background: var(--card); margin: 0 15px; transition: all 0.3s ease;
         }
+        .plane-box:hover { animation: pulse-icon 1.5s infinite; }
         .plane-box svg { width: 26px; fill: var(--accent); }
-        .callsign-text { font-weight: 950; color: var(--accent); margin-top: 15px; font-size: 20px; letter-spacing: 1.5px; }
+        .callsign-text { font-weight: 950; color: var(--accent); margin-top: 5px; font-size: 20px; letter-spacing: 1.5px; }
 
-        .route-zone { background: var(--bg); border-radius: 16px; padding: 25px; border-left: 8px solid var(--accent); margin: 35px 0; }
+        .map-container { 
+            width: 100%; height: 480px; background: var(--bg); border-radius: 16px; 
+            margin-top: 0; 
+            border: 1px solid var(--border); overflow: hidden; z-index: 1; position: relative;
+            opacity: 0; animation: slideUpFade 0.6s 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        [data-theme="dark"] .map-container { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+
+        .route-zone { 
+            background: var(--bg); border-radius: 16px; padding: 25px; border-left: 8px solid var(--accent); 
+            margin: 35px 0; transition: transform 0.3s ease, box-shadow 0.3s ease; 
+        }
+        .route-zone:hover { transform: translateX(6px); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .proc-grid { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr 1fr 1.1fr; gap: 8px; margin-bottom: 25px; }
         .proc-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 4px; text-align: center; }
         .proc-label { font-size: 10px; font-weight: 800; color: var(--text); text-transform: uppercase; margin-bottom: 4px; }
@@ -118,18 +157,43 @@
         .route-title { font-size: 12px; font-weight: 800; color: var(--accent); margin-bottom: 12px; letter-spacing: 1.5px; }
         .route-text { font-family: "Courier New", Courier, monospace; font-size: 24px; font-weight: 800; color: var(--text); line-height: 1.5; word-break: break-all; white-space: pre-wrap; }
         
-        .meta-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 15px; border-top: 2px solid var(--bg); padding-top: 30px; }
+        .meta-grid { 
+            display: flex; justify-content: space-between; align-items: flex-start; 
+            border-top: 2px solid var(--bg); padding-top: 30px; width: 100%;
+        }
+        .meta-item { display: flex; flex-direction: column; flex: 1; }
+        .meta-item.align-left { align-items: flex-start; text-align: left; }
+        .meta-item.align-center { align-items: center; text-align: center; }
+        .meta-item.align-right { align-items: center; text-align: right; }
         .m-title { font-size: 12px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 6px; }
         .m-val { font-size: 18px; font-weight: 800; color: var(--text); }
         
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 15px; margin-top: 25px; }
         .gallery img { width: 100%; border-radius: 14px; }
-
-        .mode-toggle { padding: 8px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-weight: 800; font-size: 12px; }
         
         .weather-box { margin-top: 10px; padding: 12px; border-radius: 8px; background: var(--card); border: 1px dashed var(--border); }
         .weather-label { font-size: 10px; font-weight: 900; color: var(--accent); margin-bottom: 4px; display: block; text-transform: uppercase;}
         .weather-code { font-family: "Courier New", Courier, monospace; font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.4; word-break: break-all;}
+
+        .copy-section {
+            margin-top: 25px; padding: 25px; background: var(--card);
+            border-radius: 20px; border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            animation: slideUpFade 0.6s 0.3s ease-out forwards; opacity: 0;
+        }
+        .copy-section h3 { margin-top: 0; font-size: 16px; color: var(--primary); display: flex; align-items: center; justify-content: space-between;}
+        .copy-textarea {
+            width: 100%; height: 110px; resize: vertical;
+            background: var(--bg); color: var(--text); border: 2px dashed var(--border);
+            border-radius: 10px; padding: 15px; font-family: "Courier New", Courier, monospace;
+            font-weight: bold; margin-bottom: 12px; line-height: 1.5; outline: none; transition: border 0.3s;
+        }
+        .copy-textarea:focus { border-color: var(--accent); }
+        .copy-btn {
+            background: var(--accent); color: white; border: none; padding: 10px 20px; 
+            border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 14px;
+        }
+        .copy-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3); }
     </style>
 </head>
 <body>
@@ -172,6 +236,7 @@
         <button class="btn add-btn" onclick="addNewLeg()">增加航段</button>
         <button class="btn reset-btn" onclick="resetAllMaps()">对齐航图</button>
         <button class="btn export-btn" onclick="exportAsImage()">保存图片</button>
+        <button class="btn html-btn" onclick="exportAsHTML()">生成网页</button>
     </div>
 
     <div id="editorStack"></div>
@@ -181,6 +246,7 @@
     <div id="capture-area">
         <div id="previewZone"></div>
     </div>
+    <div id="copy-zone"></div>
 </div>
 
 <script>
@@ -189,6 +255,7 @@ let mapInstances = {};
 let mapDoms = {}; 
 let routeLayers = {}; 
 let lastLegICAO = {}; 
+let flightData = [{ call: '', acft: '', dep: '', depN: '', depRwy: '', sid: '', depTrans: '', arr: '', arrN: '', arrTrans: '', star: '', arrRwy: '', alt: '', altN: '', rte: '', imgs: [], depWx: '', arrWx: '' }];
 
 fetch('https://cdn.jsdelivr.net/gh/mwgg/Airports@master/airports.json')
     .then(res => res.json())
@@ -201,8 +268,6 @@ fetch('https://cdn.jsdelivr.net/gh/mwgg/Airports@master/airports.json')
         }
         draw();
     });
-
-let flightData = [{ call: '', acft: '', dep: '', depN: '', depRwy: '', sid: '', depTrans: '', arr: '', arrN: '', arrTrans: '', star: '', arrRwy: '', alt: '', altN: '', rte: '', imgs: [], depWx: '', arrWx: '' }];
 
 window.onload = () => { renderEditor(); draw(); };
 
@@ -246,7 +311,6 @@ function toggleDarkMode() {
     document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
     document.getElementById('modeBtn').innerText = isDark ? '🌙 黑夜模式' : '☀️ 白天模式';
     Object.values(mapInstances).forEach(m => m.invalidateSize());
-    draw();
 }
 
 function resetAllMaps() {
@@ -260,6 +324,21 @@ function resetAllMaps() {
     });
 }
 
+// ✨ 构建纯净航路信息：如果没有输入则完全空白
+function updateCopyText(idx) {
+    let leg = flightData[idx];
+    let routeParts = [];
+    if(leg.dep) routeParts.push(leg.dep + (leg.depRwy ? '/' + leg.depRwy : ''));
+    if(leg.sid) routeParts.push(leg.sid);
+    if(leg.rte) routeParts.push(leg.rte);
+    if(leg.star) routeParts.push(leg.star);
+    if(leg.arr) routeParts.push(leg.arr + (leg.arrRwy ? '/' + leg.arrRwy : ''));
+    
+    let copyTextContent = routeParts.join(' ').trim();
+    let copyArea = document.getElementById(`copy-text-area-${idx}`);
+    if (copyArea) copyArea.value = copyTextContent;
+}
+
 async function fetchMetar(idx, type) {
     const icao = type === 'dep' ? flightData[idx].dep : flightData[idx].arr;
     if (!icao || icao.length < 4) return alert("请输入机场 ICAO");
@@ -267,53 +346,258 @@ async function fetchMetar(idx, type) {
     try {
         const response = await fetch(`https://metar.vatsim.net/metar.php?id=${icao.toUpperCase()}`);
         const data = await response.text();
-        if (data && data.length > 5) { flightData[idx][type + 'Wx'] = data.trim(); renderEditor(); draw(); }
+        if (data && data.length > 5) { 
+            flightData[idx][type + 'Wx'] = data.trim(); 
+            let container = document.getElementById(`disp-${type}Wx-container-${idx}`);
+            if(container) container.innerHTML = `<div class="weather-box"><span class="weather-label">${type === 'dep'?'DEPARTURE':'ARRIVAL'} METAR (${icao})</span><div class="weather-code">${data.trim()}</div></div>`;
+            updateCopyText(idx);
+        }
     } catch (e) { alert("网络错误"); } finally { btn.innerText = type === 'dep' ? "起飞天气" : "到达天气"; }
 }
 
-function deleteWx(idx, type) { flightData[idx][type + 'Wx'] = ''; renderEditor(); draw(); }
+function deleteWx(idx, type) { 
+    flightData[idx][type + 'Wx'] = ''; 
+    let container = document.getElementById(`disp-${type}Wx-container-${idx}`);
+    if(container) container.innerHTML = '';
+    updateCopyText(idx);
+}
 
-// ✨ 修复后的截图函数：隐藏地图 + 极速响应
 function exportAsImage() {
     const target = document.getElementById('capture-area');
     const btn = document.querySelector('.export-btn');
-    btn.innerText = "生成中..."; btn.disabled = true;
+    const originalBtnText = btn.innerText;
+    btn.innerText = "准备航图加载..."; btn.disabled = true;
     
-    // 强制回到页面顶部，防止截图偏移
     window.scrollTo(0, 0);
 
-    html2canvas(target, { 
-        useCORS: true, 
-        scale: 3, 
-        backgroundColor: null,
-        onclone: (clonedDoc) => {
-            // ✨ 关键修复：在截图副本中彻底隐藏地图容器
-            const maps = clonedDoc.querySelectorAll('.map-container');
-            maps.forEach(m => { m.style.display = 'none'; });
+    target.classList.add('no-animation');
+    target.offsetHeight; 
+
+    Object.keys(mapInstances).forEach(idx => {
+        const map = mapInstances[idx];
+        const layer = routeLayers[idx];
+        if (map && layer) {
+            map.invalidateSize();
+            map.fitBounds(layer.getBounds(), { padding: [80, 80], animate: false });
         }
-    }).then(canvas => {
-        const link = document.createElement('a'); 
-        link.download = `Dispatch_${flightData[0].call || 'Plan'}.png`;
-        link.href = canvas.toDataURL("image/png"); 
-        link.click();
-        btn.innerText = "保存图片"; btn.disabled = false;
+    });
+
+    setTimeout(() => {
+        btn.innerText = "生成高清图片中...";
+        html2canvas(target, { 
+            useCORS: true, 
+            allowTaint: false, 
+            scale: 3, 
+            backgroundColor: null,
+            logging: false
+        }).then(canvas => {
+            const link = document.createElement('a'); 
+            link.download = `Dispatch_${flightData[0].call || 'Plan'}.png`;
+            link.href = canvas.toDataURL("image/png"); 
+            link.click();
+        }).catch(err => {
+            console.error(err);
+            alert("截图生成失败，请刷新页面重试。");
+        }).finally(() => {
+            target.classList.remove('no-animation');
+            btn.innerText = originalBtnText; btn.disabled = false;
+        });
+    }, 1500); 
+}
+
+function exportAsHTML() {
+    const target = document.getElementById('capture-area');
+    const btn = document.querySelector('.html-btn');
+    const originalBtnText = btn.innerText;
+    btn.innerText = "准备航图加载..."; btn.disabled = true;
+    
+    window.scrollTo(0, 0);
+
+    target.classList.add('no-animation');
+    target.offsetHeight; 
+
+    Object.keys(mapInstances).forEach(idx => {
+        const map = mapInstances[idx];
+        const layer = routeLayers[idx];
+        if (map && layer) {
+            map.invalidateSize();
+            map.fitBounds(layer.getBounds(), { padding: [80, 80], animate: false });
+        }
+    });
+
+    setTimeout(() => {
+        btn.innerText = "正在打包网页...";
+        html2canvas(target, { 
+            useCORS: true, 
+            allowTaint: false, 
+            scale: 3, 
+            backgroundColor: null,
+            logging: false
+        }).then(canvas => {
+            const imgData = canvas.toDataURL("image/png");
+
+            // ✨ 提取纯净航路信息
+            let cleanRouteText = "";
+            flightData.forEach((leg, i) => {
+                if (flightData.length > 1) cleanRouteText += `--- 航段 ${i + 1} ---\n`;
+                let routeParts = [];
+                if(leg.dep) routeParts.push(leg.dep + (leg.depRwy ? '/' + leg.depRwy : ''));
+                if(leg.sid) routeParts.push(leg.sid);
+                if(leg.rte) routeParts.push(leg.rte);
+                if(leg.star) routeParts.push(leg.star);
+                if(leg.arr) routeParts.push(leg.arr + (leg.arrRwy ? '/' + leg.arrRwy : ''));
+                let routeStr = routeParts.join(' ').trim();
+                if (routeStr) {
+                    cleanRouteText += routeStr + "\n\n";
+                }
+            });
+            cleanRouteText = cleanRouteText.trim();
+
+            const htmlContent = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>飞行简报 - ${flightData[0].call || 'Plan'}</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif; 
+            background: #f1f5f9; color: #1e293b; margin: 0; padding: 40px 20px; 
+            display: flex; flex-direction: column; align-items: center; 
+        }
+        .container { 
+            max-width: 900px; width: 100%; display: flex; flex-direction: column; gap: 30px; 
+        }
+        .image-box { 
+            background: #cbd5e1; border-radius: 30px; padding: 40px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center; 
+        }
+        .image-box img { 
+            max-width: 100%; height: auto; display: block; margin: 0 auto; 
+            border-radius: 10px; 
+        }
+        .text-box { 
+            background: #ffffff; border-radius: 20px; padding: 30px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid #cbd5e1;
+        }
+        .header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; 
+        }
+        .header h3 { 
+            margin: 0; color: #0f172a; font-size: 18px; display: flex; align-items: center; gap: 8px;
+        }
+        .copy-btn { 
+            background: #2563eb; color: #fff; border: none; padding: 10px 20px; 
+            border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; 
+        }
+        .copy-btn:hover { background: #1d4ed8; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(37,99,235,0.3); }
+        textarea { 
+            width: 100%; height: 160px; resize: vertical; padding: 15px; box-sizing: border-box; 
+            border: 2px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; 
+            font-family: "Courier New", Courier, monospace; font-size: 16px; font-weight: bold;
+            color: #334155; outline: none; line-height: 1.5; transition: border 0.3s;
+        }
+        textarea:focus { border-color: #2563eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="image-box">
+            <img src="${imgData}" alt="Flight Dispatch Board">
+        </div>
+        
+        <div class="text-box">
+            <div class="header">
+                <h3>ENROUTE BRIEFING</h3>
+                <button class="copy-btn" onclick="copyRouteText(this)">一键复制</button>
+            </div>
+            <textarea id="route-text" readonly>${cleanRouteText}</textarea>
+        </div>
+    </div>
+
+    <script>
+        function copyRouteText(btn) {
+            const ta = document.getElementById('route-text');
+            ta.select();
+            ta.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(ta.value).then(() => {
+                // ✨ 无弹窗优雅交互
+                const originalText = btn.innerText;
+                btn.innerText = "✅ 复制成功";
+                btn.style.background = "#059669";
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.background = "";
+                }, 2000);
+            });
+        }
+    <\/script>
+</body>
+</html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `FlightBriefing_${flightData[0].call || 'Plan'}.html`;
+            link.click();
+
+        }).catch(err => {
+            console.error(err);
+            alert("网页打包失败，请刷新页面重试。");
+        }).finally(() => {
+            target.classList.remove('no-animation');
+            btn.innerText = originalBtnText; btn.disabled = false;
+        });
+    }, 1500); 
+}
+
+// ✨ 修改后的复制交互：取代原来的 alert 弹窗
+function copyTextData(idx, btnEl) {
+    const copyTarget = document.getElementById(`copy-text-area-${idx}`);
+    copyTarget.select();
+    copyTarget.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(copyTarget.value).then(() => {
+        // 无弹窗交互效果
+        const originalText = btnEl.innerText;
+        btnEl.innerText = "✅ 复制成功";
+        btnEl.style.background = "var(--success)";
+        setTimeout(() => {
+            btnEl.innerText = originalText;
+            btnEl.style.background = ""; // 恢复原样式
+        }, 2000);
     });
 }
 
 function autoInput(idx, field, el) {
     const code = el.value.toUpperCase(); 
     flightData[idx][field] = code;
+    
+    let dispEl = document.getElementById(`disp-${field}-${idx}`);
+    if(dispEl) dispEl.innerText = code;
+
     const nameField = field + 'N';
     const airportName = (typeof DB !== 'undefined' && DB[code]) ? DB[code] : '';
     flightData[idx][nameField] = airportName;
+
     const targetInput = document.getElementById(`${nameField}-${idx}`);
     if (targetInput) targetInput.value = airportName;
-    draw();
+
+    let dispNameEl = document.getElementById(`disp-${nameField}-${idx}`);
+    if(dispNameEl) dispNameEl.innerText = airportName;
+
+    updateCopyText(idx);
+
+    if ((field === 'dep' || field === 'arr') && flightData[idx].dep.length === 4 && flightData[idx].arr.length === 4) {
+        initMapForLeg(idx);
+    }
 }
 
 function updateData(idx, field, val) { 
     flightData[idx][field] = val; 
-    draw(); 
+    let dispEl = document.getElementById(`disp-${field}-${idx}`);
+    if(dispEl) dispEl.innerText = val;
+    updateCopyText(idx);
 }
 
 function addNewLeg() {
@@ -351,82 +635,114 @@ function initMapForLeg(idx) {
     const container = document.getElementById(`map-placeholder-${idx}`);
     if (!container) return;
     let depP, arrP;
-    if (typeof COORDS_DB !== 'undefined' && COORDS_DB[depICAO]) {
-        depP = { lat: COORDS_DB[depICAO][0], lon: COORDS_DB[depICAO][1] };
-    } else if (airportGeoData[depICAO]) {
-        depP = { lat: airportGeoData[depICAO].lat, lon: airportGeoData[depICAO].lon };
-    }
-    if (typeof COORDS_DB !== 'undefined' && COORDS_DB[arrICAO]) {
-        arrP = { lat: COORDS_DB[arrICAO][0], lon: COORDS_DB[arrICAO][1] };
-    } else if (airportGeoData[arrICAO]) {
-        arrP = { lat: airportGeoData[arrICAO].lat, lon: airportGeoData[arrICAO].lon };
-    }
+    if (typeof COORDS_DB !== 'undefined' && COORDS_DB[depICAO]) { depP = { lat: COORDS_DB[depICAO][0], lon: COORDS_DB[depICAO][1] }; } else if (airportGeoData[depICAO]) { depP = { lat: airportGeoData[depICAO].lat, lon: airportGeoData[depICAO].lon }; }
+    if (typeof COORDS_DB !== 'undefined' && COORDS_DB[arrICAO]) { arrP = { lat: COORDS_DB[arrICAO][0], lon: COORDS_DB[arrICAO][1] }; } else if (airportGeoData[arrICAO]) { arrP = { lat: airportGeoData[arrICAO].lat, lon: airportGeoData[arrICAO].lon }; }
+    
     if (!depP || !arrP) { container.innerHTML = ""; return; }
+    
     const currentKey = `${depICAO}-${arrICAO}`;
-    if (lastLegICAO[idx] === currentKey && mapDoms[idx]) { container.appendChild(mapDoms[idx]); if (mapInstances[idx]) mapInstances[idx].invalidateSize(); return; }
+    if (lastLegICAO[idx] === currentKey && mapDoms[idx]) { 
+        container.appendChild(mapDoms[idx]); 
+        if (mapInstances[idx]) {
+             mapInstances[idx].invalidateSize();
+             if(routeLayers[idx]) mapInstances[idx].fitBounds(routeLayers[idx].getBounds(), { padding: [80, 80], animate: false });
+        }
+        return; 
+    }
+    
     if (mapInstances[idx]) mapInstances[idx].remove();
     const mapDiv = document.createElement('div'); mapDiv.className = 'map-container';
     container.appendChild(mapDiv); mapDoms[idx] = mapDiv;
-    const map = L.map(mapDiv, { zoomControl: false, attributionControl: false, fadeAnimation: false, zoomAnimation: false });
-    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', { subdomains: ['1', '2', '3', '4'] }).addTo(map);
+    
+    const map = L.map(mapDiv, { zoomControl: false, attributionControl: false, fadeAnimation: false, zoomAnimation: false, preferCanvas: true });
+    
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', crossOrigin: true }).addTo(map);
+
     const pts = [[depP.lat, depP.lon], [arrP.lat, arrP.lon]];
     L.circleMarker(pts[0], { radius: 5, color: '#2563eb', fillOpacity: 1 }).addTo(map);
     L.circleMarker(pts[1], { radius: 5, color: '#2563eb', fillOpacity: 1 }).addTo(map);
     
-    // ✨ 修复后的高精度弧线计算
     const offsetX = pts[1][1] - pts[0][1]; const offsetY = pts[1][0] - pts[0][0];
     const r = Math.sqrt(Math.pow(offsetX, 2) + Math.pow(offsetY, 2)); const theta = Math.atan2(offsetY, offsetX);
     const controlPoint = [ pts[0][0] + (r/2) * Math.sin(theta + 0.3), pts[0][1] + (r/2) * Math.cos(theta + 0.3) ];
     const curvePoints = [];
-    // 增加步长密度（0.01），确保终点绝对对齐
     for (let t = 0; t <= 1.001; t += 0.01) {
         const x = (1-t)*(1-t)*pts[0][0] + 2*(1-t)*t*controlPoint[0] + t*t*pts[1][0];
         const y = (1-t)*(1-t)*pts[0][1] + 2*(1-t)*t*controlPoint[1] + t*t*pts[1][1];
         curvePoints.push([x, y]);
     }
     const polyline = L.polyline(curvePoints, { color: '#2563eb', weight: 3, dashArray: '5, 10', opacity: 0.6 }).addTo(map);
-    map.fitBounds(polyline.getBounds(), { padding: [100, 100], animate: false });
+    
+    map.fitBounds(polyline.getBounds(), { padding: [80, 80], animate: false });
     mapInstances[idx] = map; routeLayers[idx] = polyline; lastLegICAO[idx] = currentKey;
 }
 
 function draw() {
-    const zone = document.getElementById('previewZone'); const vault = document.getElementById('permanent-vault');
+    const zone = document.getElementById('previewZone'); 
+    const copyZone = document.getElementById('copy-zone');
+    const vault = document.getElementById('permanent-vault');
     flightData.forEach((_, i) => { if (mapDoms[i]) vault.appendChild(mapDoms[i]); });
     zone.innerHTML = '';
+    copyZone.innerHTML = '';
+
     flightData.forEach((leg, i) => {
         let imgs = (leg.imgs || []).map(s => `<img src="${s}">`).join('');
         let galleryHtml = imgs ? `<div class="gallery">${imgs}</div>` : '';
         let dWx = leg.depWx ? `<div class="weather-box"><span class="weather-label">DEPARTURE METAR (${leg.dep})</span><div class="weather-code">${leg.depWx}</div></div>` : '';
         let aWx = leg.arrWx ? `<div class="weather-box"><span class="weather-label">ARRIVAL METAR (${leg.arr})</span><div class="weather-code">${leg.arrWx}</div></div>` : '';
+        
         zone.innerHTML += `
         <div class="card">
             <div class="header">
-                <div class="station"><span class="m-title">DEPARTURE</span><div class="icao">${leg.dep || ''}</div><div class="cn-name">${leg.depN || ''}</div></div>
+                <div class="station align-left"><span class="m-title">DEPARTURE</span><div class="icao" id="disp-dep-${i}">${leg.dep || ''}</div><div class="cn-name" id="disp-depN-${i}">${leg.depN || ''}</div></div>
                 <div class="route-visual">
                     <div class="plane-line-wrapper"><div class="line-segment"></div><div class="plane-box"><svg viewBox="0 0 24 24"><path transform="rotate(90 12 12)" d="M21,16L21,14L13,9L13,3.5A1.5,1.5 0 0,0 11.5,2A1.5,1.5 0 0,0 10,3.5L10,9L2,14L2,16L10,13.5L10,19L8,20.5L8,22L11.5,21L15,22L15,20.5L13,19L13,13.5L21,16Z"/></svg></div><div class="line-segment"></div></div>
-                    <div class="callsign-text">${leg.call || ''}</div>
+                    <div class="callsign-text" id="disp-call-${i}">${leg.call || ''}</div>
                 </div>
-                <div class="station" style="text-align:right;"><span class="m-title">ARRIVAL</span><div class="icao">${leg.arr || ''}</div><div class="cn-name">${leg.arrN || ''}</div></div>
+                <div class="station align-right"><span class="m-title">ARRIVAL</span><div class="icao" id="disp-arr-${i}">${leg.arr || ''}</div><div class="cn-name" id="disp-arrN-${i}">${leg.arrN || ''}</div></div>
             </div>
+            
             <div class="meta-grid">
-                <div style="text-align: left;"><span class="m-title">AIRCRAFT</span><div class="m-val">${leg.acft || ''}</div></div>
-                <div><div style="display: inline-block; text-align: center;"><span class="m-title">ALTERNATE</span><div class="m-val" style="color:var(--warn)">${leg.alt || ''}</div></div></div>
-                <div><span class="m-title">STATUS</span><div class="m-val" style="color:var(--success)">RELEASED</div></div>
-                <div style="text-align: right;"><span class="m-title">UTC TIME</span><div class="m-val">${new Date().getUTCHours().toString().padStart(2,'0')}:${new Date().getUTCMinutes().toString().padStart(2,'0')}Z</div></div>
+                <div class="meta-item align-left"><span class="m-title">AIRCRAFT</span><div class="m-val" id="disp-acft-${i}">${leg.acft || ''}</div></div>
+                <div class="meta-item align-center"><span class="m-title">ALTERNATE</span><div class="m-val" style="color:var(--warn)" id="disp-alt-${i}">${leg.alt || ''}</div></div>
+                <div class="meta-item align-center"><span class="m-title">STATUS</span><div class="m-val" style="color:var(--success)">RELEASED</div></div>
+                <div class="meta-item align-right"><span class="m-title">UTC TIME</span><div class="m-val">${new Date().getUTCHours().toString().padStart(2,'0')}:${new Date().getUTCMinutes().toString().padStart(2,'0')}Z</div></div>
             </div>
+
             <div class="route-zone">
                 <div class="proc-grid">
-                    <div class="proc-box"><div class="proc-label">DEP RWY</div><div class="proc-val">${leg.depRwy || ''}</div></div>
-                    <div class="proc-box"><div class="proc-label">SID</div><div class="proc-val" style="color: #db2777;">${leg.sid || ''}</div></div>
-                    <div class="proc-box"><div class="proc-label">TRANS</div><div class="proc-val" style="color: #9333ea;">${leg.depTrans || ''}</div></div>
-                    <div class="proc-box"><div class="proc-label">STAR</div><div class="proc-val" style="color: #059669;">${leg.star || ''}</div></div>
-                    <div class="proc-box"><div class="proc-label">TRANS</div><div class="proc-val" style="color: #ea580c;">${leg.arrTrans || ''}</div></div>
-                    <div class="proc-box"><div class="proc-label">ARR RWY</div><div class="proc-val">${leg.arrRwy || ''}</div></div>
+                    <div class="proc-box"><div class="proc-label">DEP RWY</div><div class="proc-val" id="disp-depRwy-${i}">${leg.depRwy || ''}</div></div>
+                    <div class="proc-box"><div class="proc-label">SID</div><div class="proc-val" style="color: #db2777;" id="disp-sid-${i}">${leg.sid || ''}</div></div>
+                    <div class="proc-box"><div class="proc-label">TRANS</div><div class="proc-val" style="color: #9333ea;" id="disp-depTrans-${i}">${leg.depTrans || ''}</div></div>
+                    <div class="proc-box"><div class="proc-label">STAR</div><div class="proc-val" style="color: #059669;" id="disp-star-${i}">${leg.star || ''}</div></div>
+                    <div class="proc-box"><div class="proc-label">TRANS</div><div class="proc-val" style="color: #ea580c;" id="disp-arrTrans-${i}">${leg.arrTrans || ''}</div></div>
+                    <div class="proc-box"><div class="proc-label">ARR RWY</div><div class="proc-val" id="disp-arrRwy-${i}">${leg.arrRwy || ''}</div></div>
                 </div>
-                <div class="route-title">ENROUTE BRIEFING</div><div class="route-text">${leg.rte || ''}</div>${dWx}${aWx}
+                <div class="route-title">ENROUTE BRIEFING</div><div class="route-text" id="disp-rte-${i}">${leg.rte || ''}</div>
+                <div id="disp-depWx-container-${i}">${dWx}</div>
+                <div id="disp-arrWx-container-${i}">${aWx}</div>
             </div>
             <div id="map-placeholder-${i}" class="map-container"></div>${galleryHtml}
         </div>`;
+
+        // ✨ 初次加载时构建纯净航路
+        let routeParts = [];
+        if(leg.dep) routeParts.push(leg.dep + (leg.depRwy ? '/' + leg.depRwy : ''));
+        if(leg.sid) routeParts.push(leg.sid);
+        if(leg.rte) routeParts.push(leg.rte);
+        if(leg.star) routeParts.push(leg.star);
+        if(leg.arr) routeParts.push(leg.arr + (leg.arrRwy ? '/' + leg.arrRwy : ''));
+        let copyTextContent = routeParts.join(' ').trim();
+
+        // ✨ 统一标题，传入按钮元素以实现无弹窗交互
+        copyZone.innerHTML += `
+        <div class="copy-section">
+            <h3>ENROUTE BRIEFING
+                <button class="copy-btn" onclick="copyTextData(${i}, this)">一键复制</button>
+            </h3>
+            <textarea class="copy-textarea" id="copy-text-area-${i}" readonly>${copyTextContent}</textarea>
+        </div>`;
+
         requestAnimationFrame(() => initMapForLeg(i));
     });
 }
