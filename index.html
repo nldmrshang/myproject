@@ -198,6 +198,25 @@
             border: 1px solid var(--border);
             padding: 8px 6px;
         }
+        .floating-controls-toggle {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: 44px;
+            padding: 12px 20px;
+            margin-bottom: 8px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-ui);
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .floating-controls-toggle:last-child { margin-bottom: 0; }
+        .floating-controls.collapsed .floating-controls-toggle { margin-bottom: 0; }
         .floating-btn-group {
             flex-direction: column;
             gap: 6px;
@@ -666,6 +685,12 @@
                 transform: translate(50%, -50%);
                 padding: 10px 8px;
             }
+            .floating-controls-toggle {
+                display: flex;
+            }
+            .floating-controls.collapsed .floating-btn-group {
+                display: none !important;
+            }
             .floating-controls .btn {
                 min-height: 44px;
                 padding: 10px 12px;
@@ -754,6 +779,9 @@
                 flex-direction: column;
                 padding: 10px 8px;
             }
+            .floating-controls.collapsed .floating-btn-group {
+                display: none !important;
+            }
             .floating-btn-group {
                 flex-direction: row;
                 flex-wrap: wrap;
@@ -790,7 +818,7 @@
         <div class="simbrief-id-wrap">
             <img src="https://www.simbrief.com/favicon.ico" alt="SimBrief ID" class="simbrief-id-icon" title="SimBrief ID" onerror="this.outerHTML='<span class=\'simbrief-id-fallback\'>ID</span>'">
         </div>
-        <input type="text" id="simbrief-pilot-id" placeholder="数字 ID 或用户名" class="simbrief-id-input" />
+        <input type="text" id="simbrief-pilot-id" placeholder="" class="simbrief-id-input" />
         <button class="sb-btn sb-btn-api" onclick="fetchSimBriefFromAPI()">API 获取</button>
     </div>
     <div class="sb-import-area">
@@ -814,7 +842,8 @@
 </div>
 
 <!-- 右下角悬浮操作条 -->
-<div class="floating-controls">
+<div class="floating-controls collapsed" id="floating-controls">
+    <button type="button" class="floating-controls-toggle" id="floating-controls-toggle" onclick="toggleFloatingControls()" aria-label="展开/收起工具">工具</button>
     <div class="btn-group floating-btn-group">
         <button class="btn add-btn" onclick="addNewLeg()">增加航段</button>
         <button class="btn reset-btn" onclick="resetAllMaps()">居中航线</button>
@@ -836,6 +865,13 @@ let overlayGroups = {}; // 叠加图层组，起降变化时只清空此组重�
 let lastLegICAO = {}; 
 let exportWithoutMap = false; // 是否在导出时隐藏地图，仅保留计划与航路
 
+function toggleFloatingControls() {
+    var el = document.getElementById('floating-controls');
+    var btn = document.getElementById('floating-controls-toggle');
+    if (!el || !btn) return;
+    el.classList.toggle('collapsed');
+    btn.textContent = el.classList.contains('collapsed') ? '工具' : '收起';
+}
 function syncMapExportToggleLabels() {
     const mainBtn = document.getElementById('mapExportToggleBtn');
     const floatBtn = document.getElementById('mapExportToggleBtn_floating');
