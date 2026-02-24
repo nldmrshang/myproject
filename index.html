@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>飞行任务签派中心</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'><path transform='rotate(90 12 12)' d='M21,16L21,14L13,9L13,3.5A1.5,1.5 0 0,0 11.5,2A1.5,1.5 0 0,0 10,3.5L10,9L2,14L2,16L10,13.5L10,19L8,20.5L8,22L11.5,21L15,22L15,20.5L13,19L13,13.5L21,16Z'/></svg>" type="image/svg+xml">
     
     <script>window.L_DISABLE_3D = true;</script>
     
@@ -21,7 +22,6 @@
             --card: #ffffff; --border: #cbd5e1; --text: #1e293b; --accent: #2563eb; 
             --crz-color: #f59e0b; /* 巡航高度强调色 */
             --radius-ui: 12px; /* 统一圆角：解析区、悬浮操作条及内部按钮 */
-            --card-border-gradient: linear-gradient(90deg, rgba(37,99,235,0.4), rgba(16,185,129,0.4)); /* 默认渐变，后续用 JS 随机覆盖 */
         }
 
         [data-theme="dark"] {
@@ -40,16 +40,92 @@
         
         .editor { 
             width: 340px; background: var(--card); border-radius: 20px; padding: 22px; 
-            border: 1px solid var(--border); height: 92vh; overflow-y: auto; 
+            border: 2px solid var(--border); height: 92vh; overflow-y: auto; 
             position: sticky; top: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
         }
         .editor h2 { font-weight: 800; font-size: 20px; color: var(--primary); margin-bottom: 25px; }
-
-        .sb-import-area {
-            background: var(--bg); border: 1px solid var(--border);
-            border-radius: var(--radius-ui); padding: 12px; margin-bottom: 12px;
+        .editor-title-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            flex-shrink: 0;
+            color: var(--accent);
         }
-        .sb-import-area label { color: var(--accent); margin-top: 0; margin-bottom: 8px; font-weight: 900; }
+        .editor-title-icon svg { width: 100%; height: 100%; fill: currentColor; }
+
+        .simbrief-parse-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .simbrief-parse-label {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.08);
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--accent);
+        }
+        .simbrief-parse-input {
+            flex: 1;
+            min-width: 0;
+            height: 32px;
+            padding: 0 10px;
+            font-size: 13px;
+            font-family: inherit;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            line-height: 1.4;
+            background: var(--bg);
+            color: var(--text);
+            outline: none;
+            resize: none;
+            box-sizing: border-box;
+        }
+        .simbrief-parse-input:focus { border-color: var(--accent); }
+        .sb-btn-parse {
+            flex: 0 0 auto;
+            min-width: 32px;
+            width: 32px;
+            max-width: 32px;
+            height: 32px;
+            padding: 0 6px;
+            background: #dc2626;
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-ui);
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.25s, color 0.25s;
+        }
+        .sb-btn-parse.loading {
+            background: #eab308;
+            color: #1e293b;
+        }
+        .sb-btn-parse.success {
+            background: #22c55e;
+            color: #fff;
+        }
+        .form-hint {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 4px;
+            margin-bottom: 0;
+            min-height: 1.2em;
+        }
+        .form-hint.has-error { color: #dc2626; }
         .sb-btn-row { display: flex; gap: 10px; margin-top: 10px; }
         .sb-btn { 
             flex: 1; padding: 10px; 
@@ -58,12 +134,39 @@
         }
         .sb-btn-clip { background: #8b5cf6; }
         .sb-btn-api {
-            background: #8b5cf6;
+            background: #dc2626;
             border-radius: var(--radius-ui);
-            padding: 8px 12px;
-            font-size: 11px;
-            font-weight: 800;
-            min-width: 0;
+            padding: 0 6px;
+            min-width: 32px;
+            width: 32px;
+            max-width: 32px;
+            height: 32px;
+            cursor: pointer;
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            transition: background 0.25s, color 0.25s;
+        }
+        .sb-btn-api.loading {
+            background: #eab308;
+            color: #1e293b;
+        }
+        .sb-btn-api.success {
+            background: #22c55e;
+            color: #fff;
+        }
+        .sb-btn-api .sb-btn-api-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.1em;
+            height: 1.1em;
+        }
+        .sb-btn-api .sb-btn-api-icon svg {
+            width: 100%;
+            height: 100%;
         }
         .simbrief-id-icon {
             height: 20px;
@@ -85,6 +188,23 @@
         .simbrief-id-wrap .simbrief-id-icon {
             height: 18px;
         }
+        .simbrief-abort-btn {
+            display: none;
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 8px;
+            background: #dc2626;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            padding: 0;
+        }
+        .simbrief-abort-btn:hover { background: #b91c1c; }
+        .simbrief-id-wrap.loading .simbrief-id-icon { display: none !important; }
+        .simbrief-id-wrap.loading .simbrief-id-fallback { display: none !important; }
+        .simbrief-id-wrap.loading .simbrief-abort-btn { display: flex !important; align-items: center; justify-content: center; }
         .simbrief-id-fallback {
             font-size: 12px;
             font-weight: 800;
@@ -102,20 +222,27 @@
         .simbrief-id-input {
             flex: 1;
             min-width: 0;
-            max-width: 200px;
-            padding: 6px 10px;
+            max-width: none;
+            height: 32px;
+            padding: 0 10px;
             font-size: 13px;
             font-family: inherit;
-            border: 1px solid var(--border);
+            border: 2px solid var(--border);
             border-radius: 8px;
             line-height: 1.3;
             background: var(--bg);
             color: var(--text);
             outline: none;
+            box-sizing: border-box;
         }
         .simbrief-id-input:focus { border-color: var(--accent); }
         .simbrief-row .sb-btn-api {
-            flex-shrink: 0;
+            flex: 0 0 auto;
+            min-width: 32px;
+            width: 32px;
+            max-width: 32px;
+            height: 32px;
+            padding: 0 6px;
         }
         
         .btn-group { display: flex; flex-direction: row; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
@@ -141,7 +268,7 @@
 
         .leg-block { 
             background: var(--bg); padding: 15px; border-radius: 12px; 
-            margin-bottom: 25px; border: 1px solid var(--border); 
+            margin-bottom: 25px; border: 2px solid var(--border); 
             animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .leg-flip-highlight {
@@ -151,7 +278,7 @@
         
         .editor-group {
             background: var(--card); 
-            border: 1px solid var(--border);
+            border: 2px solid var(--border);
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 12px;
@@ -165,14 +292,20 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 2px solid var(--border);
             padding-bottom: 8px;
         }
+        .load-editor-grid { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+        .load-editor-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; min-width: 0; }
+        .load-editor-row:last-child { grid-template-columns: repeat(2, 1fr); }
+        .load-editor-item { min-width: 0; }
+        .load-editor-item label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin: 0 0 4px; letter-spacing: 0.5px; }
+        .load-editor-item input { width: 100%; box-sizing: border-box; }
 
         label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin: 0 0 5px; letter-spacing: 1px; }
         
         input, textarea { 
-            width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 8px; 
+            width: 100%; border: 2px solid var(--border); border-radius: 8px; padding: 8px; 
             font-size: 13px; font-family: inherit; box-sizing: border-box; background: var(--bg); outline: none; color: var(--text);
             transition: border 0.3s;
         }
@@ -181,10 +314,10 @@
         textarea { text-align: left; resize: vertical; }
         
         .img-manage-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-        .img-thumb-wrapper { position: relative; width: 60px; height: 60px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+        .img-thumb-wrapper { position: relative; width: 60px; height: 60px; border-radius: 6px; overflow: hidden; border: 2px solid var(--border); }
         .img-thumb { width: 100%; height: 100%; object-fit: cover; }
         .del-img-btn { position: absolute; top: 2px; right: 2px; background: var(--warn); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; cursor: pointer; font-size: 12px; display:flex; align-items:center; justify-content:center;}
-        .mode-toggle { padding: 8px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-weight: 800; font-size: 12px; }
+        .mode-toggle { padding: 8px 15px; border-radius: 8px; border: 2px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-weight: 800; font-size: 12px; }
 
         .floating-controls {
             position: fixed;
@@ -195,7 +328,7 @@
             background: var(--card);
             border-radius: var(--radius-ui);
             box-shadow: 0 18px 40px rgba(15,23,42,0.25);
-            border: 1px solid var(--border);
+            border: 2px solid var(--border);
             padding: 8px 6px;
         }
         .floating-controls-toggle {
@@ -277,17 +410,15 @@
             min-width: 0;
             min-height: 1140px;
             opacity: 0; animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            border: 5px solid transparent;
-            background-image: linear-gradient(var(--card), var(--card)), var(--card-border-gradient);
-            background-origin: padding-box, border-box;
-            background-clip: padding-box, border-box;
+            border: 2px solid var(--border);
+            background: var(--card);
         }
         /* 不含地图时卡片高度随内容，避免截图大片空白 */
         .no-map .card { min-height: auto; }
         .capture-no-border .card,
         .capture-no-border .copy-section-in-card,
         .capture-no-border .copy-section {
-            border: 1px solid var(--border) !important;
+            border: 2px solid var(--border) !important;
             background-image: none !important;
             background: var(--card) !important;
             background-origin: unset !important;
@@ -311,7 +442,7 @@
             position: relative;
             width: 100%;
             height: 0;
-            margin-top: 1px;
+            margin-top: -2px;
             z-index: 0;
             pointer-events: none;
         }
@@ -337,7 +468,7 @@
 
         .station { display: flex; flex-direction: column; overflow: visible; }
         .station.align-left { align-items: flex-start; text-align: left; grid-column: 1; grid-row: 1; z-index: 1; }
-        .station.align-right { align-items: flex-end; text-align: right; grid-column: 3; grid-row: 1; z-index: 1; transform: translateY(-10px); }
+        .station.align-right { align-items: flex-end; text-align: right; grid-column: 3; grid-row: 1; z-index: 1; }
         .icao { font-size: 82px; font-weight: 400; color: var(--text); letter-spacing: -3px; line-height: 1; margin: 0; }
         .cn-name { font-size: 20px; font-weight: 800; color: var(--accent); margin-top: 10px; line-height: 1.3; min-height: 1.3em; visibility: visible; }
         
@@ -363,7 +494,7 @@
         
         .crz-arc-container {
             position: absolute;
-            top: 21px;
+            top: 19px;
             left: 0;
             right: 0;
             width: 100%;
@@ -381,34 +512,34 @@
             width: 100%;
             height: 100%;
             fill: none;
-            stroke: #2563eb; /* 更接近地球蓝的深蓝色 */
+            stroke: #64748b;
             stroke-width: 2;
-            stroke-dasharray: 4 4; /* 点更密集 */
+            stroke-dasharray: 4 4;
             opacity: 1;
         }
         .crz-arc-text {
             position: relative;
-            background: var(--card);
+            background: #f59e0b;
             padding: 3px 10px;
             border-radius: 12px;
-            border: 1.5px solid var(--crz-color);
-            color: var(--crz-color);
+            border: 1.5px solid #d97706;
+            color: #1e293b;
             font-weight: 400;
             font-size: 17px;
             z-index: 2;
             box-shadow: 0 3px 10px rgba(245, 158, 11, 0.2);
-            transform: translateY(2px);
+            transform: translateY(-4px);
         }
 
         .plane-box { 
             flex-shrink: 0;
-            width: 50px; height: 50px; border: 2.5px solid var(--accent); 
+            width: 50px; height: 50px; border: 4px solid var(--accent); 
             border-radius: 50%; display: flex; align-items: center; justify-content: center; 
             background: var(--card); margin: 0 15px; transition: all 0.3s ease; position: relative; z-index: 1;
             box-shadow: 0 4px 10px rgba(37, 99, 235, 0.28);
         }
         .plane-box:hover { animation: pulse-icon 1.5s infinite; }
-        .plane-box svg { width: 28px; fill: var(--accent); }
+        .plane-box svg { width: 28px; fill: var(--accent); stroke: var(--accent); stroke-width: 1.2; }
         .callsign-text { font-weight: 950; color: #7c3aed; margin-top: 5px; font-size: 22px; letter-spacing: 1.5px; z-index: 1; }
 
         .metrics-divider {
@@ -427,7 +558,7 @@
         .m-line {
             flex: 1;
             height: 0;
-            border-top: 3px dashed #6d4c41;
+            border-top: 2px dashed rgba(100, 116, 139, 0.4);
             opacity: 1;
         }
         .m-data-area {
@@ -439,8 +570,8 @@
         }
         .m-label-sub {
             font-size: 26px; 
-            font-weight: 400; 
-            color: #94a3b8; 
+            font-weight: 700; 
+            color: #475569; 
             letter-spacing: 1px;
             margin: 0;
             line-height: 1;
@@ -449,17 +580,17 @@
         }
         .m-val-sub {
             font-size: 26px; 
-            font-weight: 400; 
+            font-weight: 700; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             line-height: 1; 
             margin: 0;
             text-shadow: none;
         }
-        .val-dist { color: var(--accent); }
+        .val-dist { color: #1d4ed8; }
 
         .map-wrapper {
             width: 100%; height: 360px; min-height: 360px;
-            margin-top: 0;
+            margin-top: 28px;
             overflow: hidden;
             border-radius: 16px;
             position: relative;
@@ -495,35 +626,84 @@
         }
         .route-arrow-icon { background: none !important; border: none !important; }
 
-        .route-zone { 
-            background: var(--bg); border-radius: 16px; padding: 18px 28px; border-left: 8px solid var(--accent); 
-            margin: 28px 0; transition: transform 0.3s ease, box-shadow 0.3s ease;
-            min-height: 170px;
-            flex-shrink: 0;
-            max-width: 680px;
-            margin-left: auto;
-            margin-right: auto;
-            width: 100%;
-            box-sizing: border-box;
-            min-width: 0;
-        }
-        .route-zone:hover { transform: translateX(6px); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        
+        .route-content { margin-top: 24px; min-width: 0; width: 100%; flex-shrink: 0; }
+
         .proc-grid { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr 1fr 1.1fr; gap: 8px; margin-bottom: 14px; min-width: 0; }
-        .proc-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 11px 6px; text-align: center; }
+        .proc-box { background: var(--card); border: 2px solid var(--border); border-radius: 10px; padding: 11px 6px; text-align: center; }
         .proc-label { font-size: 14px; font-weight: 400; color: var(--text); text-transform: uppercase; margin-bottom: 4px; }
         .proc-val { font-size: 20px; font-weight: 400; color: var(--text); }
         .proc-val.rwy-val { color: #0891b2; }
 
+        /* 飞行流程进度条：与块同宽，排版放宽 */
+        .proc-track {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            margin-bottom: 18px;
+            min-width: 0;
+            gap: 14px;
+            overflow: visible;
+        }
+        .proc-track-node {
+            position: relative;
+            z-index: 1;
+            flex: 1 1 0;
+            min-width: 0;
+            min-height: 64px;
+            max-width: 100%;
+            background: var(--card);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: visible;
+        }
+        .proc-track-node-label { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 6px; display: block; white-space: nowrap; }
+        .proc-track-node-val { font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .proc-track-node-val.rwy { color: #0891b2; }
+        .proc-track-node-val.sid { color: #db2777; }
+        .proc-track-node-val.dep-trans { color: #9333ea; }
+        .proc-track-node-val.star { color: #059669; }
+        .proc-track-node-val.arr-trans { color: #ea580c; }
+        .proc-track-node-val.arr-rwy { color: #0891b2; }
+        /* 跑道节点突出：起降核心参数 */
+        .proc-track-node.rwy-node {
+            background: rgba(8, 145, 178, 0.14);
+            border-color: rgba(8, 145, 178, 0.45);
+            font-weight: 800;
+        }
+        .proc-track-node.rwy-node .proc-track-node-label { color: #0e7490; font-weight: 800; }
+        .proc-track-node.rwy-node .proc-track-node-val { font-weight: 800; font-size: 15px; color: #0e7490; }
         .route-title { font-size: 14px; font-weight: 800; color: var(--accent); margin-bottom: 8px; letter-spacing: 1.5px; }
-        .route-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif; font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.6; word-break: break-all; white-space: pre-wrap; }
+        .route-text-wrap { background: var(--card); border: 2px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 4px; }
+        .route-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif; font-size: 18px; color: var(--text); line-height: 1.65; word-break: break-word; white-space: pre-wrap; }
+        .route-text strong { font-weight: 800; }
+        .route-text .route-seg-airway { font-weight: 450; }
+        .route-text .route-seg-dep { color: #0891b2; }
+        .route-text .route-seg-sid { color: #db2777; }
+        .route-text .route-seg-dep-trans { color: #9333ea; }
+        .route-text .route-seg-star { color: #059669; }
+        .route-text .route-seg-arr-trans { color: #ea580c; }
+        .route-text .route-seg-arr { color: #0891b2; }
+        
+        .load-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 16px; margin-bottom: 16px; min-width: 0; align-items: stretch; }
+        .load-box { background: var(--card); border: 2px solid var(--border); border-radius: 10px; padding: 10px 8px; text-align: center; min-width: 0; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .load-label { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 4px; display: block; }
+        .load-val { font-size: 16px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .load-val.fuel-val { color: #ca8a04; }
         
         .meta-grid { 
             display: flex; justify-content: space-between; align-items: flex-start; 
-            border-top: 4px solid #1e293b; padding-top: 32px; width: 100%;
+            border-top: 2px solid rgba(30, 41, 59, 0.5); padding-top: 32px; width: 100%;
+            border-bottom: 2px solid rgba(30, 41, 59, 0.5); padding-bottom: 24px;
             min-height: 78px;
             flex-shrink: 0;
-            margin-bottom: 28px;
+            margin-bottom: 0;
         }
         .meta-item { display: flex; flex-direction: column; flex: 1; }
         .meta-item.align-left { align-items: flex-start; text-align: left; }
@@ -532,28 +712,28 @@
         .m-title { font-size: 13px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 6px; text-shadow: none; }
         .station .m-title {
             font-size: 14px;
-            color: #0ea5e9;
+            color: #64748b;
         }
         .m-title.meta-acft { color: #64748b; }
         .m-title.meta-altn { color: #64748b; }
+        .m-val.meta-alt-val { color: #1e293b; }
         .m-title.meta-utc { color: #64748b; }
         .m-val { font-size: 20px; font-weight: 800; color: var(--text); text-shadow: none; }
         
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 15px; margin-top: 25px; }
         .gallery img { width: 100%; border-radius: 14px; }
         
-        .weather-box { margin-top: 8px; padding: 10px 14px; border-radius: 8px; background: var(--card); border: 1px solid var(--border); min-height: 52px; max-width: 520px; }
+        .weather-box { margin-top: 8px; padding: 10px 14px; border-radius: 8px; background: var(--card); border: 2px solid var(--border); min-height: 52px; max-width: 520px; }
         .weather-label { font-size: 13px; font-weight: 900; color: var(--accent); margin-bottom: 2px; display: block; text-transform: uppercase;}
-        .weather-code { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif; font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.4; word-break: break-all; min-height: 1.8em; white-space: pre-wrap; }
+        .weather-code { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif; font-size: 14px; font-weight: 400; color: var(--text); line-height: 1.4; word-break: break-all; min-height: 1.8em; white-space: pre-wrap; }
+        .weather-code .wx-pressure { color: #ca8a04; }
+        .weather-code .wx-wind { color: #16a34a; }
         [id^="disp-depWx-container-"], [id^="disp-arrWx-container-"] { min-height: 58px; }
 
         .copy-section {
             margin-top: 25px; padding: 25px; background: var(--card);
             border-radius: 20px;
-            border: 5px solid transparent;
-            background-image: linear-gradient(var(--card), var(--card)), var(--card-border-gradient);
-            background-origin: padding-box, border-box;
-            background-clip: padding-box, border-box;
+            border: 2px solid var(--border);
             box-shadow: 0 10px 30px rgba(0,0,0,0.05);
             animation: slideUpFade 0.6s 0.3s ease-out forwards; opacity: 0;
             width: 100%;
@@ -568,7 +748,7 @@
         .copy-section h3 { margin-top: 0; font-size: 16px; color: var(--primary); display: flex; align-items: center; justify-content: space-between;}
         .copy-textarea {
             width: 100%; height: 110px; resize: vertical;
-            background: var(--bg); color: var(--text); border: 1px solid var(--border);
+            background: var(--bg); color: var(--text); border: 2px solid var(--border);
             border-radius: 10px; padding: 15px;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
             font-size: 14px; font-weight: 700; line-height: 1.6; margin-bottom: 12px; outline: none; transition: border 0.3s;
@@ -656,18 +836,20 @@
             .cn-name {
                 font-size: 16px;
             }
-            .route-zone {
-                padding: 12px 16px;
-            }
+            .route-content { margin-top: 18px; }
             .route-text {
-                font-size: 13px;
+                font-size: 16px;
             }
-            .proc-grid {
-                grid-template-columns: 1fr 1fr 1fr;
-                gap: 6px;
-            }
-            .proc-label { font-size: 11px; }
-            .proc-val { font-size: 15px; }
+            .route-text-wrap { padding: 12px 16px; }
+            .proc-track { gap: 10px; }
+            .proc-track-node { padding: 10px 8px; min-height: 56px; }
+            .proc-track-node-label { font-size: 9px; }
+            .proc-track-node-val { font-size: 12px; }
+            .load-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .load-label { font-size: 11px; }
+            .load-val { font-size: 14px; }
+            .load-editor-row:first-child { grid-template-columns: repeat(2, 1fr); }
+            .load-editor-row:last-child { grid-template-columns: repeat(3, 1fr); }
             .meta-grid {
                 flex-wrap: wrap;
                 gap: 16px;
@@ -742,19 +924,24 @@
             .m-val-sub {
                 font-size: 20px;
             }
-            .route-zone {
-                padding: 10px 12px;
-                margin-left: 0;
-                margin-right: 0;
-            }
+            .route-content { margin-top: 14px; }
             .route-text {
-                font-size: 12px;
+                font-size: 14px;
             }
+            .route-text-wrap { padding: 10px 12px; }
             .proc-grid {
                 grid-template-columns: 1fr 1fr;
             }
-            .proc-label { font-size: 10px; }
-            .proc-val { font-size: 14px; }
+            .load-grid { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+            .load-label { font-size: 10px; }
+            .load-val { font-size: 13px; }
+            .load-editor-row:first-child,
+            .load-editor-row:last-child { grid-template-columns: 1fr; }
+            .proc-track { gap: 2px; padding: 0 2px; }
+            .proc-track-node { padding: 6px 2px; min-height: 48px; }
+            .load-box { min-height: 48px; }
+            .proc-track-node-label { font-size: 8px; }
+            .proc-track-node-val { font-size: 11px; }
             .gallery {
                 grid-template-columns: 1fr;
             }
@@ -805,29 +992,31 @@
 
 <datalist id="acft-list"></datalist>
 
-<div class="editor">
+    <div class="editor">
+    <div id="page-hint" class="form-hint" style="margin-bottom:8px;" aria-live="polite"></div>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
         <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-size:28px;">✈️</span>
+            <span class="editor-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path transform="rotate(90 12 12)" d="M21,16L21,14L13,9L13,3.5A1.5,1.5 0 0,0 11.5,2A1.5,1.5 0 0,0 10,3.5L10,9L2,14L2,16L10,13.5L10,19L8,20.5L8,22L11.5,21L15,22L15,20.5L13,19L13,13.5L21,16Z"/></svg></span>
             <h2>飞行任务签派</h2>
         </div>
         <button class="mode-toggle" onclick="toggleDarkMode()" id="modeBtn">🌙 黑夜模式</button>
     </div>
 
     <div class="simbrief-row">
-        <div class="simbrief-id-wrap">
-            <img src="https://www.simbrief.com/favicon.ico" alt="SimBrief ID" class="simbrief-id-icon" title="SimBrief ID" onerror="this.outerHTML='<span class=\'simbrief-id-fallback\'>ID</span>'">
+        <div class="simbrief-id-wrap" id="simbrief-id-wrap">
+            <img src="https://www.simbrief.com/favicon.ico" alt="SimBrief ID" class="simbrief-id-icon" id="simbrief-id-icon" title="SimBrief ID" onerror="this.outerHTML='<span class=\'simbrief-id-fallback\'>ID</span>'">
+            <button type="button" class="simbrief-abort-btn" id="simbrief-abort-btn" onclick="abortSimBriefFetch()" title="打断获取" style="display:none">打断</button>
         </div>
         <input type="text" id="simbrief-pilot-id" placeholder="" class="simbrief-id-input" />
-        <button class="sb-btn sb-btn-api" onclick="fetchSimBriefFromAPI()">API 获取</button>
+        <button class="sb-btn sb-btn-api" onclick="fetchSimBriefFromAPI()" title="从 SimBrief API 获取">GO</button>
     </div>
-    <div class="sb-import-area">
-        <label>⚡ SimBrief 解析</label>
-        <textarea id="sb-raw-text" rows="2"></textarea>
-        <div class="sb-btn-row">
-            <button class="sb-btn" onclick="parseSimBrief()">直接解析</button>
-        </div>
+    <div id="api-hint" class="form-hint" aria-live="polite"></div>
+    <div class="simbrief-parse-row">
+        <div class="simbrief-parse-label">文本</div>
+        <textarea id="sb-raw-text" class="simbrief-parse-input" rows="1" placeholder=""></textarea>
+        <button type="button" class="sb-btn sb-btn-parse" onclick="parseSimBrief()" title="解析文本框内容">GO</button>
     </div>
+    <div id="parse-hint" class="form-hint" aria-live="polite"></div>
 
     <div id="editorStack"></div>
 </div>
@@ -855,6 +1044,12 @@
 </div>
 
 <script>
+function setHint(id, text, isError) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text || '';
+    el.classList.toggle('has-error', !!text && isError !== false);
+}
 let airportGeoData = {};
 let mapInstances = {}; 
 let mapDoms = {}; 
@@ -892,7 +1087,7 @@ function initAircraftList() {
     });
 }
 
-let flightData = [{ call: '', acft: '', dist: '', crz: '', dep: '', depN: '', depRwy: '', sid: '', depTrans: '', arr: '', arrN: '', arrTrans: '', star: '', arrRwy: '', alt: '', altN: '', rte: '', imgs: [], depWx: '', arrWx: '' }];
+let flightData = [{ call: '', acft: '', dist: '', crz: '', dep: '', depN: '', depRwy: '', sid: '', depTrans: '', arr: '', arrN: '', arrTrans: '', star: '', arrRwy: '', alt: '', altN: '', rte: '', pax: '', bagCargo: '', payload: '', fuel: '', estTow: '', imgs: [], depWx: '', arrWx: '' }];
 
 fetch('https://cdn.jsdelivr.net/gh/mwgg/Airports@master/airports.json')
     .then(res => res.json())
@@ -906,48 +1101,50 @@ fetch('https://cdn.jsdelivr.net/gh/mwgg/Airports@master/airports.json')
         draw();
     });
 
-function applyRandomCardBorderGradient() {
-    const gradients = [
-        'linear-gradient(90deg, rgba(37,99,235,0.45), rgba(16,185,129,0.45))',
-        'linear-gradient(90deg, rgba(245,158,11,0.5), rgba(239,68,68,0.45))',
-        'linear-gradient(90deg, rgba(56,189,248,0.5), rgba(129,140,248,0.5))',
-        'linear-gradient(90deg, rgba(236,72,153,0.5), rgba(34,211,238,0.45))',
-        'linear-gradient(90deg, rgba(22,163,74,0.5), rgba(190,242,100,0.45))',
-        'linear-gradient(90deg, rgba(148,163,184,0.6), rgba(30,64,175,0.6))'
-    ];
-    const pick = gradients[Math.floor(Math.random() * gradients.length)];
-    document.documentElement.style.setProperty('--card-border-gradient', pick);
-}
-
 window.onload = () => { 
-    applyRandomCardBorderGradient();
     initAircraftList();
     var pilotIdEl = document.getElementById('simbrief-pilot-id');
     if (pilotIdEl && localStorage.getItem('simbrief_pilot_id')) pilotIdEl.value = localStorage.getItem('simbrief_pilot_id');
     if (pilotIdEl) pilotIdEl.addEventListener('change', function() { localStorage.setItem('simbrief_pilot_id', this.value.trim()); });
+    if (pilotIdEl) pilotIdEl.addEventListener('input', function() { setHint('api-hint', ''); });
+    var parseTa = document.getElementById('sb-raw-text');
+    if (parseTa) parseTa.addEventListener('input', function() { setHint('parse-hint', ''); });
     renderEditor(); 
     draw(); 
 };
 
 /** 从 SimBrief API 获取最新计划并填入 flightData[0]。支持 Pilot ID（数字）或用户名，存于 localStorage。 */
+var _apiAbortController = null;
+function abortSimBriefFetch() {
+    if (_apiAbortController) { _apiAbortController.abort(); }
+}
 async function fetchSimBriefFromAPI() {
     var pilotIdEl = document.getElementById('simbrief-pilot-id');
     var pilotId = (pilotIdEl && pilotIdEl.value.trim()) || (typeof localStorage !== 'undefined' && localStorage.getItem('simbrief_pilot_id')) || '';
     if (!pilotId) {
-        alert('请先输入 SimBrief Pilot ID（数字）或用户名，并确保已在 simbrief.com 生成过至少一次飞行计划。');
+        setHint('api-hint', '请先输入 SimBrief Pilot ID 或用户名，并确保已在 simbrief.com 生成过至少一次飞行计划。');
         if (pilotIdEl) pilotIdEl.focus();
         return;
     }
+    setHint('api-hint', '');
     if (pilotIdEl) { pilotIdEl.value = pilotId; localStorage.setItem('simbrief_pilot_id', pilotId); }
     var base = 'https://www.simbrief.com/api/xml.fetcher.php';
     var urlByUserid = base + '?userid=' + encodeURIComponent(pilotId) + '&json=1';
     var urlByUsername = base + '?username=' + encodeURIComponent(pilotId) + '&json=1';
     var btn = document.querySelector('.sb-btn-api');
-    var origText = btn ? btn.innerText : '';
-    if (btn) { btn.innerText = '获取中…'; btn.disabled = true; }
+    if (btn) {
+        btn.classList.remove('success');
+        btn.classList.add('loading');
+        btn.innerHTML = '…';
+        btn.disabled = true;
+    }
+    var wrap = document.getElementById('simbrief-id-wrap');
+    if (wrap) wrap.classList.add('loading');
+    _apiAbortController = new AbortController();
+    var signal = _apiAbortController.signal;
     var data, res, triedUsername = false;
 
-    function doFetch(url) { return fetch(url, { method: 'GET', mode: 'cors' }); }
+    function doFetch(url) { return fetch(url, { method: 'GET', mode: 'cors', signal: signal }); }
     function applyAndUpdate() {
         applySimBriefJsonToFlightData(data);
         if (typeof renderEditor === 'function') renderEditor();
@@ -965,9 +1162,9 @@ async function fetchSimBriefFromAPI() {
             var errBody = '';
             try { errBody = await res.text(); } catch (_) {}
             if (res.status === 400) {
-                alert('SimBrief 返回：ID/用户名无效或该账号暂无飞行计划。\n\n请确认：\n1) 输入的是数字 Pilot ID，或 SimBrief 登录用户名；\n2) 已在 simbrief.com 生成过至少一次 OFP。\n\nPilot ID 可在 SimBrief 账户设置或「新飞行」可选条目中查看。' + (errBody ? '\n\n接口返回: ' + errBody.slice(0, 200) : ''));
+                setHint('api-hint', 'ID/用户名无效或该账号暂无飞行计划，请确认 Pilot ID 或用户名并在 simbrief.com 生成过 OFP。');
             } else {
-                alert('请求失败: HTTP ' + res.status + (errBody ? '\n' + errBody.slice(0, 150) : ''));
+                setHint('api-hint', '请求失败: HTTP ' + res.status);
             }
             return;
         }
@@ -975,34 +1172,47 @@ async function fetchSimBriefFromAPI() {
         window._lastSimBriefJson = data;
         if (typeof console !== 'undefined' && console.log) console.log('SimBrief 返回的 JSON 已存入 window._lastSimBriefJson，可在控制台输入：\nJSON.stringify(window._lastSimBriefJson, null, 2)');
         applyAndUpdate();
+        if (btn) { btn.innerHTML = 'OK'; btn.classList.remove('loading'); btn.classList.add('success'); }
+        setHint('api-hint', '');
     } catch (e) {
-        if ((e.message && e.message.indexOf('Failed to fetch') !== -1) || e.name === 'TypeError') {
+        if (e.name === 'AbortError') {
+            setHint('api-hint', '');
+        } else if ((e.message && e.message.indexOf('Failed to fetch') !== -1) || e.name === 'TypeError') {
             try {
                 var proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(triedUsername ? urlByUsername : urlByUserid);
-                res = await fetch(proxyUrl);
+                res = await fetch(proxyUrl, { signal: signal });
                 if (!res.ok) {
                     if (res.status === 400 && !triedUsername) {
                         proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(urlByUsername);
-                        res = await fetch(proxyUrl);
+                        res = await fetch(proxyUrl, { signal: signal });
                         triedUsername = true;
                     }
                 }
                 if (!res.ok) {
-                    alert('代理请求失败或 SimBrief 返回 400：请检查 Pilot ID/用户名，并确保已生成过飞行计划。');
+                    setHint('api-hint', '代理请求失败或 SimBrief 返回 400，请检查 Pilot ID/用户名并确保已生成过飞行计划。');
                     return;
                 }
                 data = await res.json();
                 window._lastSimBriefJson = data;
                 if (typeof console !== 'undefined' && console.log) console.log('SimBrief 返回的 JSON 已存入 window._lastSimBriefJson');
                 applyAndUpdate();
+                if (btn) { btn.innerHTML = 'OK'; btn.classList.remove('loading'); btn.classList.add('success'); }
+                setHint('api-hint', '');
             } catch (e2) {
-                alert('获取失败（可能因跨域 CORS）。请检查网络或稍后重试。\n' + (e2.message || e2));
+                if (e2.name !== 'AbortError') setHint('api-hint', '获取失败（可能因跨域），请检查网络或稍后重试。');
             }
         } else {
-            alert('获取失败: ' + (e.message || e));
+            if (e.name !== 'AbortError') setHint('api-hint', '获取失败: ' + (e.message || e));
         }
     } finally {
-        if (btn) { btn.innerText = origText; btn.disabled = false; }
+        _apiAbortController = null;
+        var wrapEl = document.getElementById('simbrief-id-wrap');
+        if (wrapEl) wrapEl.classList.remove('loading');
+        if (btn) {
+            btn.classList.remove('loading');
+            btn.innerHTML = btn.classList.contains('success') ? 'OK' : 'GO';
+            btn.disabled = false;
+        }
     }
 }
 
@@ -1010,14 +1220,15 @@ async function fetchSimBriefFromAPI() {
 function showLastSimBriefJson() {
     var ta = document.getElementById('sb-raw-text');
     if (typeof window._lastSimBriefJson === 'undefined' || window._lastSimBriefJson === null) {
-        alert('请先点击「API 获取」成功拉取一次计划，再点「查看 JSON」。');
+        setHint('parse-hint', '请先点击上方 GO 成功拉取一次计划后再查看 JSON');
         return;
     }
+    setHint('parse-hint', '');
     try {
         var str = JSON.stringify(window._lastSimBriefJson, null, 2);
         if (ta) { ta.value = str; ta.rows = Math.min(30, Math.max(10, str.split('\n').length)); }
     } catch (e) {
-        alert('JSON 序列化失败: ' + (e.message || e));
+        setHint('parse-hint', 'JSON 序列化失败');
     }
 }
 
@@ -1121,6 +1332,25 @@ function applySimBriefJsonToFlightData(data) {
     d.depWx = (wx.orig_metar || wx.origin_metar || (wx.origin && wx.origin.metar) || data.orig_metar || p.orig_metar || '').toString().trim();
     d.arrWx = (wx.dest_metar || wx.destination_metar || (wx.destination && wx.destination.metar) || data.dest_metar || p.dest_metar || '').toString().trim();
 
+    var weights = data.weights || p.weights || {};
+    var fuelObj = data.fuel || p.fuel || {};
+    var paxVal = (weights.pax_count != null ? weights.pax_count : (gen.pax_count != null ? gen.pax_count : (p.pax_count != null ? p.pax_count : '')));
+    var bagCargoVal = (weights.cargo != null ? weights.cargo : (gen.cargo != null ? gen.cargo : (p.cargo != null ? p.cargo : '')));
+    var payloadVal = (weights.payload != null ? weights.payload : (gen.payload != null ? gen.payload : ''));
+    var fuelVal = (fuelObj.plan_ramp != null ? fuelObj.plan_ramp : (fuelObj.plan_burn != null ? fuelObj.plan_burn : (fuelObj.used != null ? fuelObj.used : (gen.fuel != null ? gen.fuel : (p.fuel != null ? p.fuel : '')))));
+    var estZfw = weights.est_zfw != null ? weights.est_zfw : (gen.est_zfw != null ? gen.est_zfw : '');
+    var estTowVal = (fuelObj.takeoff_gross_weight != null ? fuelObj.takeoff_gross_weight : (weights.takeoff_gross_weight != null ? weights.takeoff_gross_weight : (fuelObj.gross_weight != null ? fuelObj.gross_weight : (weights.tow != null ? weights.tow : ''))));
+    if (estTowVal === '' && estZfw !== '' && fuelVal !== '') {
+        var z = parseFloat(String(estZfw).replace(/[^\d.]/g, ''));
+        var f = parseFloat(String(fuelVal).replace(/[^\d.]/g, ''));
+        if (!isNaN(z) && !isNaN(f)) estTowVal = String(Math.round(z + f));
+    }
+    if (paxVal !== '' && paxVal != null) d.pax = String(paxVal).trim();
+    if (bagCargoVal !== '' && bagCargoVal != null) d.bagCargo = String(bagCargoVal).trim();
+    if (payloadVal !== '' && payloadVal != null) d.payload = String(payloadVal).trim();
+    if (fuelVal !== '' && fuelVal != null) d.fuel = String(fuelVal).trim();
+    if (estTowVal !== '' && estTowVal != null) d.estTow = String(estTowVal).trim();
+
     if (typeof DB !== 'undefined') {
         if (d.dep && DB[d.dep]) d.depN = DB[d.dep];
         if (d.arr && DB[d.arr]) d.arrN = DB[d.arr];
@@ -1129,8 +1359,15 @@ function applySimBriefJsonToFlightData(data) {
 }
 
 function parseSimBrief(sourceText) {
+    var btn = document.querySelector('.sb-btn-parse');
+    if (btn) { btn.classList.remove('success'); btn.classList.add('loading'); btn.innerHTML = '…'; }
+    setHint('parse-hint', '');
     const raw = sourceText || document.getElementById('sb-raw-text').value;
-    if (!raw) return alert("请先粘贴 SimBrief 文本内容！");
+    if (!raw) {
+        if (btn) { btn.classList.remove('loading'); btn.innerHTML = 'GO'; }
+        setHint('parse-hint', '请先粘贴 SimBrief 文本内容');
+        return;
+    }
     let idx = flightData.length - 1;
     
     const callMatch = raw.match(/ATC\s+C\/S\s+([A-Z0-9]+)/i) || raw.match(/CALLSIGN[:\s]+([A-Z0-9]+)/i) || raw.match(/OFP\s+FOR\s+([A-Z0-9]+)/i);
@@ -1229,7 +1466,20 @@ function parseSimBrief(sourceText) {
     const arrWxMatch = raw.match(/Destination:[\s\S]+?SA\s+([\d]{6}\s+[\s\S]+?)(?=\n)/i) || raw.match(/DEST(?:INATION)?[\s\S]+?METAR[:\s]*([A-Z0-9\s]+(?=\n|$))/i);
     if (arrWxMatch) flightData[idx].arrWx = arrWxMatch[1].trim();
     
-    renderEditor(); draw(); 
+    const paxMatch = raw.match(/(?:PAX|PASSENGERS?)[:\s]+(\d+)/i) || raw.match(/PASSENGER\s+COUNT[:\s]+(\d+)/i);
+    if (paxMatch) flightData[idx].pax = paxMatch[1].trim();
+    const bagCargoMatch = raw.match(/(?:BAG\/?CARGO|CARGO)(?:\s+WEIGHT)?[:\s]+([\d.,]+\s*(?:KG|LBS?|LB)?)/i);
+    if (bagCargoMatch) flightData[idx].bagCargo = bagCargoMatch[1].trim();
+    const payloadMatch = raw.match(/PAYLOAD[:\s]+([\d.,]+\s*(?:KG|LBS?|LB)?)/i);
+    if (payloadMatch) flightData[idx].payload = payloadMatch[1].trim();
+    const fuelMatch = raw.match(/(?:FUEL|BLOCK\s+FUEL|PLAN\s+RAMP)[:\s]+([\d.,]+\s*(?:KG|LBS?|LB)?)/i) || raw.match(/FUEL\s+(?:ON\s+BOARD|REQUIRED)[:\s]+([\d.,]+)/i);
+    if (fuelMatch) flightData[idx].fuel = fuelMatch[1].trim();
+    const estTowMatch = raw.match(/(?:EST\.?\s*)?TOW[:\s]+([\d.,]+\s*(?:KG|LBS?|LB)?)/i) || raw.match(/TAKE[- ]?OFF\s+(?:GROSS\s+)?WEIGHT[:\s]+([\d.,]+)/i) || raw.match(/TOGW[:\s]+([\d.,]+)/i);
+    if (estTowMatch) flightData[idx].estTow = estTowMatch[1].trim();
+    
+    renderEditor(); draw();
+    if (btn) { btn.classList.remove('loading'); btn.classList.add('success'); btn.innerHTML = 'OK'; }
+    setHint('parse-hint', '');
 }
 
 function toggleDarkMode() {
@@ -1282,7 +1532,8 @@ function updateCopyText(idx) {
 
 async function fetchMetar(idx, type) {
     const icao = type === 'dep' ? flightData[idx].dep : flightData[idx].arr;
-    if (!icao || icao.length < 4) return alert("请输入机场 ICAO");
+    if (!icao || icao.length < 4) { setHint('page-hint', '请先填写起降机场 ICAO'); return; }
+    setHint('page-hint', '');
     const btn = event.target; btn.innerText = "...";
     try {
         const response = await fetch(`https://metar.vatsim.net/metar.php?id=${icao.toUpperCase()}`);
@@ -1290,10 +1541,10 @@ async function fetchMetar(idx, type) {
         if (data && data.length > 5) { 
             flightData[idx][type + 'Wx'] = data.trim(); 
             let container = document.getElementById(`disp-${type}Wx-container-${idx}`);
-            if(container) container.innerHTML = `<div class="weather-box"><span class="weather-label">${type === 'dep'?'DEPARTURE':'ARRIVAL'} METAR (${icao})</span><div class="weather-code">${data.trim()}</div></div>`;
+            if(container) container.innerHTML = `<div class="weather-box"><span class="weather-label">${type === 'dep'?'DEPARTURE':'ARRIVAL'} METAR (${icao})</span><div class="weather-code">${formatWxCode(data.trim())}</div></div>`;
             updateCopyText(idx);
         }
-    } catch (e) { alert("网络错误"); } finally { btn.innerText = type === 'dep' ? "起飞天气" : "到达天气"; }
+    } catch (e) { setHint('page-hint', '网络错误，请稍后重试'); } finally { btn.innerText = type === 'dep' ? "起飞天气" : "到达天气"; }
 }
 
 function deleteWx(idx, type) { 
@@ -1346,7 +1597,7 @@ function exportAsImage() {
             link.click();
         }).catch(err => {
             console.error(err);
-            alert("截图生成失败，请刷新页面重试。");
+            setHint('page-hint', '截图生成失败，请刷新页面重试');
         }).finally(() => {
             target.classList.remove('no-animation');
             target.classList.remove('no-map');
@@ -1430,7 +1681,7 @@ function exportAsHTML() {
         }
         .text-box { 
             background: #ffffff; border-radius: 20px; padding: 30px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid #cbd5e1;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 2px solid #cbd5e1;
         }
         .text-box .header { 
             display: flex; justify-content: space-between; align-items: center; 
@@ -1494,7 +1745,7 @@ function exportAsHTML() {
 
         }).catch(err => {
             console.error(err);
-            alert("网页打包失败，请刷新页面重试。");
+            setHint('page-hint', '网页打包失败，请刷新页面重试');
         }).finally(() => {
             target.classList.remove('no-animation');
             target.classList.remove('no-map');
@@ -1587,6 +1838,50 @@ function autoInput(idx, field, el) {
     }
 }
 
+function formatWxCode(s) {
+    if (!s || !String(s).trim()) return '';
+    var esc = function(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+    var out = esc(String(s).trim());
+    out = out.replace(/\b(\d{5}(?:G\d{2})?(?:KT|MPS)|VRB\d{2}(?:KT|MPS))\b/g, '<span class="wx-wind">$1</span>');
+    out = out.replace(/(Q\d{4})/g, '<span class="wx-pressure">$1</span>');
+    return out;
+}
+
+function formatRouteWithWeights(s, leg) {
+    if (!s || !String(s).trim()) return '';
+    var esc = function(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+    var tokens = String(s).trim().split(/\s+/);
+    if (!tokens.length) return '';
+    var sid = (leg && leg.sid) ? String(leg.sid).trim() : '';
+    var depTrans = (leg && leg.depTrans) ? String(leg.depTrans).trim() : '';
+    var star = (leg && leg.star) ? String(leg.star).trim() : '';
+    var arrTrans = (leg && leg.arrTrans) ? String(leg.arrTrans).trim() : '';
+    var isAirway = function(t) { return /^[A-Z]{0,2}\d{2,5}$/.test(t); };
+    return tokens.map(function(seg, i) {
+        var first = i === 0;
+        var last = i === tokens.length - 1;
+        var escSeg = esc(seg);
+        var cls = '';
+        if (first) cls = 'route-seg-dep';
+        else if (last) cls = 'route-seg-arr';
+        else if (seg === sid) cls = 'route-seg-sid';
+        else if (seg === depTrans) cls = 'route-seg-dep-trans';
+        else if (seg === star) cls = 'route-seg-star';
+        else if (seg === arrTrans) cls = 'route-seg-arr-trans';
+        if (cls) {
+            if ((first || last) && seg.indexOf('/') !== -1) {
+                var parts = seg.split('/');
+                var airport = esc(parts[0]);
+                var runway = parts[1] ? esc(parts[1]) : '';
+                return '<span class="' + cls + '"><strong>' + airport + (runway ? '/' + runway : '') + '</strong></span>';
+            }
+            return '<span class="' + cls + '">' + escSeg + '</span>';
+        }
+        if (isAirway(seg)) return '<span class="route-seg-airway">' + escSeg + '</span>';
+        return '<strong>' + escSeg + '</strong>';
+    }).join(' ');
+}
+
 function updateData(idx, field, val) { 
     flightData[idx][field] = val; 
     let dispEl = document.getElementById(`disp-${field}-${idx}`);
@@ -1595,14 +1890,14 @@ function updateData(idx, field, val) {
         let leg = flightData[idx];
         let fullRoute = [leg.dep + (leg.depRwy ? '/' + leg.depRwy : ''), leg.rte, leg.arr + (leg.arrRwy ? '/' + leg.arrRwy : '')].filter(Boolean).join(' ').trim();
         let rteDisp = document.getElementById(`disp-rte-${idx}`);
-        if (rteDisp) rteDisp.innerText = fullRoute;
+        if (rteDisp) rteDisp.innerHTML = formatRouteWithWeights(fullRoute, leg);
     }
     updateCopyText(idx);
 }
 
 function addNewLeg() {
     const lastLeg = flightData[flightData.length - 1];
-    flightData.push({ call: lastLeg.call, acft: lastLeg.acft, dist: '', crz: '', dep: lastLeg.arr, depN: lastLeg.arrN, depRwy: '', sid: '', depTrans: '', arr: '', arrN: '', arrTrans: '', star: '', arrRwy: '', alt: '', altN: '', rte: '', imgs: [], depWx: '', arrWx: '' });
+    flightData.push({ call: lastLeg.call, acft: lastLeg.acft, dist: '', crz: '', dep: lastLeg.arr, depN: lastLeg.arrN, depRwy: '', sid: '', depTrans: '', arr: '', arrN: '', arrTrans: '', star: '', arrRwy: '', alt: '', altN: '', rte: '', pax: '', bagCargo: '', payload: '', fuel: '', estTow: '', imgs: [], depWx: '', arrWx: '' });
     renderEditor(); 
     draw();
 }
@@ -1745,6 +2040,21 @@ function renderEditor() {
             </div>
             
             <div class="editor-group">
+                <div class="editor-group-title">配载与燃油</div>
+                <div class="load-editor-grid">
+                    <div class="load-editor-row">
+                        <div class="load-editor-item"><label>PAX</label><input type="text" value="${leg.pax || ''}" placeholder="—" oninput="updateData(${i}, 'pax', this.value)"></div>
+                        <div class="load-editor-item"><label>BAG/CARGO</label><input type="text" value="${leg.bagCargo || ''}" placeholder="—" oninput="updateData(${i}, 'bagCargo', this.value)"></div>
+                        <div class="load-editor-item"><label>PAYLOAD</label><input type="text" value="${leg.payload || ''}" placeholder="—" oninput="updateData(${i}, 'payload', this.value)"></div>
+                    </div>
+                    <div class="load-editor-row">
+                        <div class="load-editor-item"><label>FUEL</label><input type="text" value="${leg.fuel || ''}" placeholder="—" oninput="updateData(${i}, 'fuel', this.value)"></div>
+                        <div class="load-editor-item"><label>EST TOW</label><input type="text" value="${leg.estTow || ''}" placeholder="—" oninput="updateData(${i}, 'estTow', this.value)"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="editor-group">
                 <div class="editor-group-title">气象与附件</div>
                 ${wxButtonsHtml}
                 
@@ -1821,8 +2131,8 @@ function initMapForLeg(idx) {
                 const y = (1 - t) * (1 - t) * altStart[1] + 2 * (1 - t) * t * altControl[1] + t * t * altEnd[1];
                 altCurvePoints.push([x, y]);
             }
-            altLayers[idx] = L.polyline(altCurvePoints, { color: '#dc2626', weight: 1.5, dashArray: '4, 8', opacity: 0.75 }).addTo(map);
-            altMarkers[idx] = L.circleMarker([altP.lat, altP.lon], { radius: 5, color: '#dc2626', fillColor: '#dc2626', fillOpacity: 1 }).addTo(map);
+            altLayers[idx] = L.polyline(altCurvePoints, { color: '#eab308', weight: 1.5, dashArray: '4, 8', opacity: 0.85 }).addTo(map);
+            altMarkers[idx] = L.circleMarker([altP.lat, altP.lon], { radius: 5, color: '#eab308', fillColor: '#eab308', fillOpacity: 1 }).addTo(map);
             let b = routeLayers[idx].getBounds();
             b = b.extend(altLayers[idx].getBounds());
             map.fitBounds(b, { padding: [80, 80], animate: false });
@@ -1883,8 +2193,8 @@ function initMapForLeg(idx) {
                     (1 - t) * (1 - t) * altStart[1] + 2 * (1 - t) * t * altControl[1] + t * t * altEnd[1]
                 ]);
             }
-            altLine = L.polyline(altCurvePoints, { color: '#dc2626', weight: 1.5, dashArray: '4, 8', opacity: 0.75 }).addTo(group);
-            altMarker = L.circleMarker([alP.lat, alP.lon], { radius: 5, color: '#dc2626', fillColor: '#dc2626', fillOpacity: 1 }).addTo(group);
+            altLine = L.polyline(altCurvePoints, { color: '#eab308', weight: 1.5, dashArray: '4, 8', opacity: 0.85 }).addTo(group);
+            altMarker = L.circleMarker([alP.lat, alP.lon], { radius: 5, color: '#eab308', fillColor: '#eab308', fillOpacity: 1 }).addTo(group);
         }
         return { polyline: polyline, altLine: altLine, altMarker: altMarker };
     }
@@ -1957,8 +2267,8 @@ function draw() {
     flightData.forEach((leg, i) => {
         let imgs = (leg.imgs || []).map(s => `<img src="${s}">`).join('');
         let galleryHtml = imgs ? `<div class="gallery">${imgs}</div>` : '';
-        let dWx = leg.depWx ? `<div class="weather-box"><span class="weather-label">DEPARTURE METAR (${leg.dep})</span><div class="weather-code">${leg.depWx}</div></div>` : '';
-        let aWx = leg.arrWx ? `<div class="weather-box"><span class="weather-label">ARRIVAL METAR (${leg.arr})</span><div class="weather-code">${leg.arrWx}</div></div>` : '';
+        let dWx = leg.depWx ? `<div class="weather-box"><span class="weather-label">DEPARTURE METAR (${leg.dep})</span><div class="weather-code">${formatWxCode(leg.depWx)}</div></div>` : '';
+        let aWx = leg.arrWx ? `<div class="weather-box"><span class="weather-label">ARRIVAL METAR (${leg.arr})</span><div class="weather-code">${formatWxCode(leg.arrWx)}</div></div>` : '';
         
         let cleanCrz = leg.crz ? leg.crz.replace(/^FL\s*/i, '').trim() : '';
         const hasMultiLegs = flightData.length > 1;
@@ -1985,8 +2295,10 @@ function draw() {
 
         let arcHtml = `
         <div class="crz-arc-container" id="disp-crz-arc-${i}" style="display: ${cleanCrz ? 'flex' : 'none'}">
-             <svg class="crz-arc-svg" viewBox="0 0 400 55" preserveAspectRatio="none">
-                 <path d="M 60 45 Q 200 8 340 45" /> </svg>
+             <svg class="crz-arc-svg" viewBox="0 -12 400 60" preserveAspectRatio="none">
+                 <path d="M 60 45 Q 200 -8 340 45" />
+                 <path d="M 60 45 Q 200 -8 340 45" transform="translate(0, 3)" />
+             </svg>
              <div class="crz-arc-text" id="disp-crz-text-${i}">FL${cleanCrz}</div>
         </div>`;
 
@@ -2007,21 +2319,28 @@ function draw() {
             
             ${distHtml}             <div class="meta-grid">
                 <div class="meta-item align-left"><span class="m-title meta-acft">AIRCRAFT</span><div class="m-val" id="disp-acft-${i}">${leg.acft || ''}</div></div>
-                <div class="meta-item align-center"><span class="m-title meta-altn">ALTERNATE</span><div class="m-val" style="color:var(--warn)" id="disp-alt-${i}">${leg.alt || ''}</div></div>
+                <div class="meta-item align-center"><span class="m-title meta-altn">ALTERNATE</span><div class="m-val meta-alt-val" id="disp-alt-${i}">${leg.alt || ''}</div></div>
                 <div class="meta-item align-center"><span class="m-title">STATUS</span><div class="m-val" style="color:#22c55e">RELEASED</div></div>
                 <div class="meta-item align-right"><span class="m-title meta-utc">UTC TIME</span><div class="m-val">${new Date().getUTCHours().toString().padStart(2,'0')}:${new Date().getUTCMinutes().toString().padStart(2,'0')}Z</div></div>
             </div>
 
-            <div class="route-zone">
-                <div class="proc-grid">
-                    <div class="proc-box"><div class="proc-label">DEP RWY</div><div class="proc-val rwy-val" id="disp-depRwy-${i}">${leg.depRwy || ''}</div></div>
-                    <div class="proc-box"><div class="proc-label">SID</div><div class="proc-val" style="color: #db2777;" id="disp-sid-${i}">${leg.sid || ''}</div></div>
-                    <div class="proc-box"><div class="proc-label">TRANS</div><div class="proc-val" style="color: #9333ea;" id="disp-depTrans-${i}">${leg.depTrans || ''}</div></div>
-                    <div class="proc-box"><div class="proc-label">STAR</div><div class="proc-val" style="color: #059669;" id="disp-star-${i}">${leg.star || ''}</div></div>
-                    <div class="proc-box"><div class="proc-label">TRANS</div><div class="proc-val" style="color: #ea580c;" id="disp-arrTrans-${i}">${leg.arrTrans || ''}</div></div>
-                    <div class="proc-box"><div class="proc-label">ARR RWY</div><div class="proc-val rwy-val" id="disp-arrRwy-${i}">${leg.arrRwy || ''}</div></div>
+            <div class="route-content">
+                <div class="proc-track">
+                    <div class="proc-track-node rwy-node"><span class="proc-track-node-label">DEP RWY</span><div class="proc-track-node-val rwy" id="disp-depRwy-${i}">${leg.depRwy || '—'}</div></div>
+                    <div class="proc-track-node"><span class="proc-track-node-label">SID</span><div class="proc-track-node-val sid" id="disp-sid-${i}">${leg.sid || '—'}</div></div>
+                    <div class="proc-track-node"><span class="proc-track-node-label">TRANS</span><div class="proc-track-node-val dep-trans" id="disp-depTrans-${i}">${leg.depTrans || '—'}</div></div>
+                    <div class="proc-track-node"><span class="proc-track-node-label">STAR</span><div class="proc-track-node-val star" id="disp-star-${i}">${leg.star || '—'}</div></div>
+                    <div class="proc-track-node"><span class="proc-track-node-label">TRANS</span><div class="proc-track-node-val arr-trans" id="disp-arrTrans-${i}">${leg.arrTrans || '—'}</div></div>
+                    <div class="proc-track-node rwy-node"><span class="proc-track-node-label">ARR RWY</span><div class="proc-track-node-val arr-rwy" id="disp-arrRwy-${i}">${leg.arrRwy || '—'}</div></div>
                 </div>
-                <div class="route-title">ENROUTE BRIEFING${legNoLabel}</div><div class="route-text" id="disp-rte-${i}">${fullRouteDisplay}</div>
+                <div class="route-title">ENROUTE BRIEFING${legNoLabel}</div><div class="route-text-wrap"><div class="route-text" id="disp-rte-${i}">${formatRouteWithWeights(fullRouteDisplay, leg)}</div></div>
+                <div class="load-grid">
+                    <div class="load-box"><span class="load-label">PAX</span><div class="load-val" id="disp-pax-${i}">${leg.pax || '—'}</div></div>
+                    <div class="load-box"><span class="load-label">BAG/CARGO</span><div class="load-val" id="disp-bagCargo-${i}">${leg.bagCargo || '—'}</div></div>
+                    <div class="load-box"><span class="load-label">PAYLOAD</span><div class="load-val" id="disp-payload-${i}">${leg.payload || '—'}</div></div>
+                    <div class="load-box"><span class="load-label">FUEL</span><div class="load-val fuel-val" id="disp-fuel-${i}">${leg.fuel || '—'}</div></div>
+                    <div class="load-box"><span class="load-label">EST TOW</span><div class="load-val" id="disp-estTow-${i}">${leg.estTow || '—'}</div></div>
+                </div>
                 <div id="disp-depWx-container-${i}">${dWx}</div>
                 <div id="disp-arrWx-container-${i}">${aWx}</div>
             </div>
