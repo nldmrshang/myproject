@@ -28,3 +28,4 @@ const ACFT_DB = [
     "Embraer E190",
     "Bombardier CRJ-900"
 ];
+if (typeof window !== 'undefined') { window.ACFT_DB = ACFT_DB; window.AIRCRAFT_DB = ACFT_DB; }
