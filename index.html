@@ -324,7 +324,6 @@ function resetAllMaps() {
     });
 }
 
-// ✨ 构建纯净航路信息：如果没有输入则完全空白
 function updateCopyText(idx) {
     let leg = flightData[idx];
     let routeParts = [];
@@ -436,7 +435,6 @@ function exportAsHTML() {
         }).then(canvas => {
             const imgData = canvas.toDataURL("image/png");
 
-            // ✨ 提取纯净航路信息
             let cleanRouteText = "";
             flightData.forEach((leg, i) => {
                 if (flightData.length > 1) cleanRouteText += `--- 航段 ${i + 1} ---\n`;
@@ -522,7 +520,6 @@ function exportAsHTML() {
             ta.select();
             ta.setSelectionRange(0, 99999);
             navigator.clipboard.writeText(ta.value).then(() => {
-                // ✨ 无弹窗优雅交互
                 const originalText = btn.innerText;
                 btn.innerText = "✅ 复制成功";
                 btn.style.background = "#059669";
@@ -552,19 +549,17 @@ function exportAsHTML() {
     }, 1500); 
 }
 
-// ✨ 修改后的复制交互：取代原来的 alert 弹窗
 function copyTextData(idx, btnEl) {
     const copyTarget = document.getElementById(`copy-text-area-${idx}`);
     copyTarget.select();
     copyTarget.setSelectionRange(0, 99999);
     navigator.clipboard.writeText(copyTarget.value).then(() => {
-        // 无弹窗交互效果
         const originalText = btnEl.innerText;
         btnEl.innerText = "✅ 复制成功";
         btnEl.style.background = "var(--success)";
         setTimeout(() => {
             btnEl.innerText = originalText;
-            btnEl.style.background = ""; // 恢复原样式
+            btnEl.style.background = ""; 
         }, 2000);
     });
 }
@@ -651,6 +646,9 @@ function initMapForLeg(idx) {
     }
     
     if (mapInstances[idx]) mapInstances[idx].remove();
+    // 强制清理旧 DOM，防止残骸导致变灰
+    container.innerHTML = ''; 
+    
     const mapDiv = document.createElement('div'); mapDiv.className = 'map-container';
     container.appendChild(mapDiv); mapDoms[idx] = mapDiv;
     
@@ -675,6 +673,9 @@ function initMapForLeg(idx) {
     
     map.fitBounds(polyline.getBounds(), { padding: [80, 80], animate: false });
     mapInstances[idx] = map; routeLayers[idx] = polyline; lastLegICAO[idx] = currentKey;
+    
+    // 延时刷新解决可能出现的灰屏
+    setTimeout(() => { map.invalidateSize(); }, 50);
 }
 
 function draw() {
@@ -725,7 +726,6 @@ function draw() {
             <div id="map-placeholder-${i}" class="map-container"></div>${galleryHtml}
         </div>`;
 
-        // ✨ 初次加载时构建纯净航路
         let routeParts = [];
         if(leg.dep) routeParts.push(leg.dep + (leg.depRwy ? '/' + leg.depRwy : ''));
         if(leg.sid) routeParts.push(leg.sid);
@@ -734,7 +734,6 @@ function draw() {
         if(leg.arr) routeParts.push(leg.arr + (leg.arrRwy ? '/' + leg.arrRwy : ''));
         let copyTextContent = routeParts.join(' ').trim();
 
-        // ✨ 统一标题，传入按钮元素以实现无弹窗交互
         copyZone.innerHTML += `
         <div class="copy-section">
             <h3>ENROUTE BRIEFING
