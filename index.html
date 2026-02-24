@@ -13,11 +13,14 @@
     
     <script src="airport_db.js"></script>
     <script src="airport_coords.js"></script>
+    <script src="aircraft_db.js"></script>
 
     <style>
         :root { 
-            --primary: #0f172a; --success: #059669; --warn: #dc2626; --bg: #f1f5f9; 
+            --primary: #0f172a; --success: #059669; --warn: #dc2626; --bg: #eef2f7; 
             --card: #ffffff; --border: #cbd5e1; --text: #1e293b; --accent: #2563eb; 
+            --crz-color: #f59e0b; /* 巡航高度强调色 */
+            --card-border-gradient: linear-gradient(90deg, rgba(37,99,235,0.4), rgba(16,185,129,0.4)); /* 默认渐变，后续用 JS 随机覆盖 */
         }
 
         [data-theme="dark"] {
@@ -30,10 +33,11 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif; 
             display: flex; padding: 20px; gap: 40px; justify-content: center; 
             transition: background 0.3s, color 0.3s;
+            text-shadow: 0 1px 2px rgba(15, 23, 42, 0.18);
         }
         
         .editor { 
-            width: 380px; background: var(--card); border-radius: 20px; padding: 25px; 
+            width: 340px; background: var(--card); border-radius: 20px; padding: 22px; 
             border: 1px solid var(--border); height: 92vh; overflow-y: auto; 
             position: sticky; top: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
         }
@@ -41,7 +45,7 @@
 
         .sb-import-area {
             background: var(--bg); border: 2px dashed var(--accent);
-            border-radius: 12px; padding: 15px; margin-bottom: 20px;
+            border-radius: 12px; padding: 15px; margin-bottom: 12px;
         }
         .sb-import-area label { color: var(--accent); margin-top: 0; margin-bottom: 8px; font-weight: 900; }
         .sb-btn { 
@@ -50,11 +54,11 @@
             border-radius: 6px; font-weight: 800; cursor: pointer; transition: 0.2s;
         }
         
-        .btn-group { display: flex; flex-direction: row; gap: 8px; margin-bottom: 25px; justify-content: space-between; flex-wrap: wrap; }
+        .btn-group { display: flex; flex-direction: row; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
         .btn { 
-            flex: 1; border: none; padding: 10px 4px; border-radius: 8px; 
+            flex: 1; border: none; padding: 10px 4px; border-radius: 999px; 
             cursor: pointer; font-weight: 800; color: #fff; transition: 0.2s; font-size: 11px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05); white-space: nowrap; min-width: 22%;
+            box-shadow: 0 2px 4px rgba(15,23,42,0.25); white-space: nowrap; min-width: 22%;
         }
         .add-btn { background: var(--accent); } 
         .reset-btn { background: #8b5cf6; }     
@@ -64,17 +68,43 @@
         .btn:hover { opacity: 0.9; transform: translateY(-1px); }
 
         .leg-block { 
-            background: var(--bg); padding: 20px; border-radius: 12px; 
+            background: var(--bg); padding: 15px; border-radius: 12px; 
             margin-bottom: 25px; border: 1px solid var(--border); 
             animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
+        .leg-flip-highlight {
+            animation: legFlipIn 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+            transform-origin: center;
+        }
         
-        label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin: 12px 0 5px; letter-spacing: 1px; }
+        .editor-group {
+            background: var(--card); 
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .editor-group-title {
+            font-size: 13px;
+            font-weight: 900;
+            color: var(--accent);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-bottom: 1px dashed var(--border);
+            padding-bottom: 8px;
+        }
+
+        label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin: 0 0 5px; letter-spacing: 1px; }
         
         input, textarea { 
-            width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px; 
-            font-size: 14px; font-family: inherit; box-sizing: border-box; background: var(--card); outline: none; color: var(--text);
+            width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 8px; 
+            font-size: 13px; font-family: inherit; box-sizing: border-box; background: var(--bg); outline: none; color: var(--text);
+            transition: border 0.3s;
         }
+        input:focus, textarea:focus { border-color: var(--accent); }
         input { text-align: center; }
         textarea { text-align: left; resize: vertical; }
         
@@ -84,9 +114,31 @@
         .del-img-btn { position: absolute; top: 2px; right: 2px; background: var(--warn); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; cursor: pointer; font-size: 12px; display:flex; align-items:center; justify-content:center;}
         .mode-toggle { padding: 8px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-weight: 800; font-size: 12px; }
 
+        .floating-controls {
+            position: fixed;
+            right: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 20;
+            background: var(--card);
+            border-radius: 999px;
+            box-shadow: 0 18px 40px rgba(15,23,42,0.25);
+            border: 1px solid var(--border);
+            padding: 8px 6px;
+        }
+        .floating-btn-group {
+            flex-direction: column;
+            gap: 6px;
+        }
+
         @keyframes slideUpFade {
             0% { opacity: 0; transform: translateY(20px); }
             100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes legFlipIn {
+            0% { opacity: 0; transform: rotateY(-25deg) translateY(4px); }
+            70% { opacity: 1; transform: rotateY(5deg) translateY(0); }
+            100% { opacity: 1; transform: rotateY(0deg) translateY(0); }
         }
         @keyframes pulse-icon {
             0% { transform: scale(1); box-shadow: 0 0 0 rgba(37, 99, 235, 0); }
@@ -101,79 +153,191 @@
         }
 
         .preview { width: 850px; }
-        #capture-area { padding: 40px; background: var(--border); border-radius: 30px; transition: background 0.3s;} 
+        #capture-area { padding: 40px; background: #fdfcf7; border-radius: 30px; transition: background 0.3s;} 
         
         .card { 
-            background: var(--card); border-radius: 30px; padding: 45px; 
+            border-radius: 30px; padding: 55px 45px 45px; 
             box-shadow: 0 30px 60px -12px rgba(0,0,0,0.15); position: relative; 
             margin-bottom: 35px; color: var(--text); overflow: hidden;
             opacity: 0; animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            border: 5px solid transparent;
+            background-image: linear-gradient(var(--card), var(--card)), var(--card-border-gradient);
+            background-origin: padding-box, border-box;
+            background-clip: padding-box, border-box;
         }
         
         .header { 
-            display: grid; grid-template-columns: 1fr auto 1fr; 
+            display: grid; grid-template-columns: 1fr minmax(0, 1fr) 1fr; 
             align-items: center; 
-            margin-bottom: 25px; 
+            margin-bottom: 20px; 
+            position: relative;
         }
+
         .station { display: flex; flex-direction: column; }
         .station.align-left { align-items: flex-start; text-align: left; }
         .station.align-right { align-items: flex-end; text-align: right; }
-        .icao { font-size: 70px; font-weight: 900; color: var(--text); letter-spacing: -3px; line-height: 1; margin: 0; }
+        .icao { font-size: 74px; font-weight: 900; color: var(--text); letter-spacing: -3px; line-height: 1; margin: 0; }
         .cn-name { font-size: 20px; font-weight: 800; color: var(--accent); margin-top: 12px; }
         
         .route-visual { 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 0 20px; min-width: 250px; 
+            width: 100%; min-width: 0;
         }
-        .plane-line-wrapper { display: flex; align-items: center; width: 100%; margin-bottom: 8px; }
-        .line-segment { flex: 1; height: 2px; background: var(--border); }
+        
+        .crz-arc-container {
+            position: absolute;
+            top: 6px;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 56px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .crz-arc-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: #2563eb; /* 更接近地球蓝的深蓝色 */
+            stroke-width: 2;
+            stroke-dasharray: 4 4; /* 点更密集 */
+            opacity: 1;
+        }
+        .crz-arc-text {
+            position: relative;
+            background: var(--card);
+            padding: 2px 8px;
+            border-radius: 12px;
+            border: 1.5px solid var(--crz-color);
+            color: var(--crz-color);
+            font-weight: 900;
+            font-size: 14px; /* 高度字体略大 */
+            z-index: 2;
+            box-shadow: 0 3px 10px rgba(245, 158, 11, 0.2);
+            transform: translateY(2px); /* 整体略微下移，贴近弧线下缘 */
+        }
+
+        .plane-line-wrapper { display: flex; align-items: center; width: 100%; margin-bottom: 8px; z-index: 1; }
+        .line-segment { flex: 1; min-width: 0; height: 2px; background: rgba(100, 116, 139, 0.5); }
         .plane-box { 
+            flex-shrink: 0;
             width: 46px; height: 46px; border: 2.5px solid var(--accent); 
             border-radius: 50%; display: flex; align-items: center; justify-content: center; 
-            background: var(--card); margin: 0 15px; transition: all 0.3s ease;
+            background: var(--card); margin: 0 15px; transition: all 0.3s ease; position: relative; z-index: 1;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.28);
         }
         .plane-box:hover { animation: pulse-icon 1.5s infinite; }
         .plane-box svg { width: 26px; fill: var(--accent); }
-        .callsign-text { font-weight: 950; color: var(--accent); margin-top: 5px; font-size: 20px; letter-spacing: 1.5px; }
+        .callsign-text { font-weight: 950; color: #7c3aed; margin-top: 5px; font-size: 20px; letter-spacing: 1.5px; z-index: 1; }
+
+        /* ✨ 核心调整：距离分隔栏完美对齐 */
+        .metrics-divider {
+            display: flex;
+            align-items: center; /* 确保所有子元素垂直居中 */
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 25px;
+            height: 38px; /* 略减高度，使文字与虚线视觉中心更接近 */
+        }
+        .m-line {
+            flex: 1;
+            height: 0; /* 仅通过边框绘制虚线即可 */
+            border-top: 2px dashed rgba(148, 119, 84, 0.85); /* 类似土地的暖棕色 */
+            opacity: 1;
+        }
+        .m-data-area {
+            display: flex;
+            align-items: center; /* 区域内文字垂直居中 */
+            gap: 12px;
+            padding: 0 25px;
+            height: 100%;
+        }
+        .m-label-sub {
+            font-size: 12px; 
+            font-weight: 800; 
+            color: #94a3b8; 
+            letter-spacing: 1px;
+            margin: 0;
+            line-height: 1;
+            padding-top: 0;
+        }
+        .m-val-sub {
+            font-size: 24px; 
+            font-weight: 900; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1; 
+            margin: 0;
+        }
+        .val-dist { color: var(--accent); }
 
         .map-container { 
             width: 100%; height: 480px; background: var(--bg); border-radius: 16px; 
             margin-top: 0; 
             border: 1px solid var(--border); overflow: hidden; z-index: 1; position: relative;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.3);
             opacity: 0; animation: slideUpFade 0.6s 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         [data-theme="dark"] .map-container { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+        /* 导出无地图模式：仅隐藏地图，不影响整体布局结构 */
+        .no-map .map-container {
+            display: none !important;
+        }
+        .route-arrow {
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 7px solid #1d4ed8;
+            filter: drop-shadow(0 0 1px rgba(255,255,255,0.8));
+        }
+        .route-arrow-icon { background: none !important; border: none !important; }
 
         .route-zone { 
             background: var(--bg); border-radius: 16px; padding: 25px; border-left: 8px solid var(--accent); 
             margin: 35px 0; transition: transform 0.3s ease, box-shadow 0.3s ease; 
         }
         .route-zone:hover { transform: translateX(6px); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
         .proc-grid { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr 1fr 1.1fr; gap: 8px; margin-bottom: 25px; }
         .proc-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 4px; text-align: center; }
-        .proc-label { font-size: 10px; font-weight: 800; color: var(--text); text-transform: uppercase; margin-bottom: 4px; }
+        .proc-label { font-size: 13px; font-weight: 800; color: var(--text); text-transform: uppercase; margin-bottom: 4px; }
         .proc-val { font-size: 18px; font-weight: 800; color: var(--text); }
+        .proc-val.rwy-val { color: #0d9488; }
 
-        .route-title { font-size: 12px; font-weight: 800; color: var(--accent); margin-bottom: 12px; letter-spacing: 1.5px; }
-        .route-text { font-family: "Courier New", Courier, monospace; font-size: 24px; font-weight: 800; color: var(--text); line-height: 1.5; word-break: break-all; white-space: pre-wrap; }
+        .route-title { font-size: 13px; font-weight: 800; color: var(--accent); margin-bottom: 12px; letter-spacing: 1.5px; }
+        .route-text { font-family: "Courier New", Courier, monospace; font-size: 20px; font-weight: 800; color: var(--text); line-height: 1.5; word-break: break-all; white-space: pre-wrap; }
         
         .meta-grid { 
             display: flex; justify-content: space-between; align-items: flex-start; 
-            border-top: 2px solid var(--bg); padding-top: 30px; width: 100%;
+            border-top: 2px solid var(--border); padding-top: 30px; width: 100%;
         }
         .meta-item { display: flex; flex-direction: column; flex: 1; }
         .meta-item.align-left { align-items: flex-start; text-align: left; }
         .meta-item.align-center { align-items: center; text-align: center; }
         .meta-item.align-right { align-items: center; text-align: right; }
         .m-title { font-size: 12px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 6px; }
+        .station .m-title {
+            font-size: 13px;
+            color: #0ea5e9;
+            text-shadow: 0 1px 2px rgba(15,23,42,0.35);
+        }
+        .m-title.meta-acft { color: #6366f1; }
+        .m-title.meta-altn { color: #b91c1c; }
+        .m-title.meta-utc { color: #64748b; }
         .m-val { font-size: 18px; font-weight: 800; color: var(--text); }
         
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 15px; margin-top: 25px; }
         .gallery img { width: 100%; border-radius: 14px; }
         
-        .weather-box { margin-top: 10px; padding: 12px; border-radius: 8px; background: var(--card); border: 1px dashed var(--border); }
-        .weather-label { font-size: 10px; font-weight: 900; color: var(--accent); margin-bottom: 4px; display: block; text-transform: uppercase;}
-        .weather-code { font-family: "Courier New", Courier, monospace; font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.4; word-break: break-all;}
+        .weather-box { margin-top: 10px; padding: 12px; border-radius: 8px; background: var(--card); border: 1px dashed rgba(148, 163, 184, 0.9); }
+        .weather-label { font-size: 13px; font-weight: 900; color: var(--accent); margin-bottom: 4px; display: block; text-transform: uppercase;}
+        .weather-code { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif; font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.6; word-break: break-all;}
 
         .copy-section {
             margin-top: 25px; padding: 25px; background: var(--card);
@@ -194,28 +358,65 @@
             border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 14px;
         }
         .copy-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3); }
+
+        /* 响应式布局：平板与手机适配 */
+        @media (max-width: 1024px) {
+            body {
+                flex-direction: column;
+                padding: 12px;
+                gap: 20px;
+            }
+            .editor {
+                width: 100%;
+                position: static;
+                height: auto;
+            }
+            .preview {
+                width: 100%;
+            }
+            #capture-area {
+                padding: 24px;
+                border-radius: 24px;
+            }
+            .map-container {
+                height: 380px;
+            }
+            .floating-controls {
+                right: 12px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 8px;
+            }
+            .editor {
+                padding: 16px;
+            }
+            .icao {
+                font-size: 54px;
+            }
+            .cn-name {
+                font-size: 18px;
+            }
+            .route-text {
+                font-size: 16px;
+            }
+            .map-container {
+                height: 300px;
+            }
+            .floating-controls {
+                right: 50%;
+                transform: translate(50%, -50%);
+            }
+        }
     </style>
 </head>
 <body>
 
 <div id="permanent-vault" style="display:none;"></div>
 
-<datalist id="acft-list">
-    <option value="Boeing 737-700"></option><option value="Boeing 737-800"></option>
-    <option value="Boeing 737 MAX 8"></option><option value="Boeing 747-400"></option>
-    <option value="Boeing 747-8i"></option><option value="Boeing 777-200ER"></option>
-    <option value="Boeing 777-200LR"></option><option value="Boeing 777-300ER"></option>
-    <option value="Boeing 777F"></option><option value="Boeing 787-8"></option>
-    <option value="Boeing 787-9"></option><option value="Boeing 787-10"></option>
-    <option value="Airbus A319"></option><option value="Airbus A320"></option>
-    <option value="Airbus A320neo"></option><option value="Airbus A321"></option>
-    <option value="Airbus A321neo"></option><option value="Airbus A330-200"></option>
-    <option value="Airbus A330-300"></option><option value="Airbus A330-900neo"></option>
-    <option value="Airbus A350-900"></option><option value="Airbus A350-1000"></option>
-    <option value="Airbus A380-800"></option><option value="COMAC C919"></option>
-    <option value="COMAC ARJ21"></option><option value="Embraer E190"></option>
-    <option value="Bombardier CRJ-900"></option>
-</datalist>
+<datalist id="acft-list"></datalist>
 
 <div class="editor">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
@@ -228,15 +429,8 @@
 
     <div class="sb-import-area">
         <label>⚡ SimBrief 解析</label>
-        <textarea id="sb-raw-text" rows="3" placeholder="在此粘贴 SimBrief 文本..."></textarea>
-        <button class="sb-btn" onclick="parseSimBrief()">解析并自动填入</button>
-    </div>
-
-    <div class="btn-group">
-        <button class="btn add-btn" onclick="addNewLeg()">增加航段</button>
-        <button class="btn reset-btn" onclick="resetAllMaps()">对齐航图</button>
-        <button class="btn export-btn" onclick="exportAsImage()">保存图片</button>
-        <button class="btn html-btn" onclick="exportAsHTML()">生成网页</button>
+        <textarea id="sb-raw-text" rows="3"></textarea>
+        <button class="sb-btn" onclick="parseSimBriefFromClipboard()">从剪贴板解析并自动填入</button>
     </div>
 
     <div id="editorStack"></div>
@@ -249,13 +443,46 @@
     <div id="copy-zone"></div>
 </div>
 
+<!-- 右下角悬浮操作条：始终展示四个按钮的竖条 -->
+<div class="floating-controls">
+    <div class="btn-group floating-btn-group">
+        <button class="btn add-btn" onclick="addNewLeg()">增加航段</button>
+        <button class="btn reset-btn" onclick="resetAllMaps()">居中航线</button>
+        <button class="btn reset-btn" id="mapExportToggleBtn_floating" onclick="toggleExportMapMode()">含地图导出</button>
+        <button class="btn export-btn" onclick="exportAsImage()">保存图片</button>
+        <button class="btn html-btn" onclick="exportAsHTML()">生成网页</button>
+    </div>
+</div>
+
 <script>
 let airportGeoData = {};
 let mapInstances = {}; 
 let mapDoms = {}; 
 let routeLayers = {}; 
+let altLayers = {};
 let lastLegICAO = {}; 
-let flightData = [{ call: '', acft: '', dep: '', depN: '', depRwy: '', sid: '', depTrans: '', arr: '', arrN: '', arrTrans: '', star: '', arrRwy: '', alt: '', altN: '', rte: '', imgs: [], depWx: '', arrWx: '' }];
+let exportWithoutMap = false; // 是否在导出时隐藏地图，仅保留计划与航路
+
+function syncMapExportToggleLabels() {
+    const mainBtn = document.getElementById('mapExportToggleBtn');
+    const floatBtn = document.getElementById('mapExportToggleBtn_floating');
+    const text = exportWithoutMap ? '仅计划+航路' : '含地图导出';
+    if (mainBtn) mainBtn.innerText = text;
+    if (floatBtn) floatBtn.innerText = text;
+}
+
+function initAircraftList() {
+    const list = document.getElementById('acft-list');
+    if (!list || typeof window.AIRCRAFT_DB === 'undefined') return;
+    list.innerHTML = '';
+    (window.AIRCRAFT_DB || []).forEach(code => {
+        const opt = document.createElement('option');
+        opt.value = code;
+        list.appendChild(opt);
+    });
+}
+
+let flightData = [{ call: '', acft: '', dist: '', crz: '', dep: '', depN: '', depRwy: '', sid: '', depTrans: '', arr: '', arrN: '', arrTrans: '', star: '', arrRwy: '', alt: '', altN: '', rte: '', imgs: [], depWx: '', arrWx: '' }];
 
 fetch('https://cdn.jsdelivr.net/gh/mwgg/Airports@master/airports.json')
     .then(res => res.json())
@@ -269,40 +496,139 @@ fetch('https://cdn.jsdelivr.net/gh/mwgg/Airports@master/airports.json')
         draw();
     });
 
-window.onload = () => { renderEditor(); draw(); };
+function applyRandomCardBorderGradient() {
+    const gradients = [
+        'linear-gradient(90deg, rgba(37,99,235,0.45), rgba(16,185,129,0.45))',
+        'linear-gradient(90deg, rgba(245,158,11,0.5), rgba(239,68,68,0.45))',
+        'linear-gradient(90deg, rgba(56,189,248,0.5), rgba(129,140,248,0.5))',
+        'linear-gradient(90deg, rgba(236,72,153,0.5), rgba(34,211,238,0.45))',
+        'linear-gradient(90deg, rgba(22,163,74,0.5), rgba(190,242,100,0.45))',
+        'linear-gradient(90deg, rgba(148,163,184,0.6), rgba(30,64,175,0.6))'
+    ];
+    const pick = gradients[Math.floor(Math.random() * gradients.length)];
+    document.documentElement.style.setProperty('--card-border-gradient', pick);
+}
 
-function parseSimBrief() {
-    const raw = document.getElementById('sb-raw-text').value;
+window.onload = () => { 
+    applyRandomCardBorderGradient();
+    initAircraftList();
+    renderEditor(); 
+    draw(); 
+};
+
+async function parseSimBriefFromClipboard() {
+    const ta = document.getElementById('sb-raw-text');
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+        alert("当前浏览器不支持直接读取剪贴板，请先手动粘贴 SimBrief 文本。");
+        ta.focus();
+        return;
+    }
+    try {
+        const clip = await navigator.clipboard.readText();
+        if (!clip || !clip.trim()) {
+            alert("剪贴板里没有有效文本，请先复制 SimBrief OFP 再点击按钮。");
+            ta.focus();
+            return;
+        }
+        ta.value = clip;
+        parseSimBrief(clip);
+    } catch (e) {
+        alert("无法访问剪贴板，请先手动粘贴 SimBrief 文本。");
+        ta.focus();
+    }
+}
+
+function parseSimBrief(sourceText) {
+    const raw = sourceText || document.getElementById('sb-raw-text').value;
     if (!raw) return alert("请先粘贴 SimBrief 文本内容！");
     let idx = flightData.length - 1;
-    const callMatch = raw.match(/ATC\s+C\/S\s+([A-Z0-9]+)/i);
+    
+    const callMatch = raw.match(/ATC\s+C\/S\s+([A-Z0-9]+)/i) || raw.match(/CALLSIGN[:\s]+([A-Z0-9]+)/i) || raw.match(/OFP\s+FOR\s+([A-Z0-9]+)/i);
     if (callMatch) flightData[idx].call = callMatch[1].trim();
-    const acftMatch = raw.match(/\s(A\d{3}|B\d{3}|C\d{3}|MD\d{2})\s/i) || raw.match(/(?:FENIX\s+)(A\d{3})/i) || raw.match(/(?:AIRCRAFT:\s+)([A-Z0-9-]+)/i);
+    
+    const acftMatch = raw.match(/(?:AIRCRAFT|ACFT)[:\s]+([A-Z0-9\-]+)/i) || raw.match(/\s(A\d{3}|B\d{3}|B77[0-9]|B78[0-9]|C\d{3}|MD\d{2}|E\d{3})\s/i) || raw.match(/(?:FENIX\s+)(A\d{3})/i);
     if (acftMatch) flightData[idx].acft = acftMatch[1].trim();
-    const depArrMatch = raw.match(/([A-Z]{4})\/[A-Z]{3}\s+([A-Z]{4})\/[A-Z]{3}/);
+    
+    let depArrMatch = raw.match(/([A-Z]{4})\s*\/\s*[A-Z]{3}\s+([A-Z]{4})\s*\/\s*[A-Z]{3}/);
+    if (!depArrMatch) depArrMatch = raw.match(/FROM\s+([A-Z]{4})\s+TO\s+([A-Z]{4})/i) || raw.match(/ORIGIN[:\s]+([A-Z]{4})[\s\S]+?DEST(?:INATION)?[:\s]+([A-Z]{4})/i);
     if (depArrMatch) { 
         flightData[idx].dep = depArrMatch[1]; 
         flightData[idx].depN = (typeof DB !== 'undefined' && DB[depArrMatch[1]]) || ""; 
         flightData[idx].arr = depArrMatch[2]; 
         flightData[idx].arrN = (typeof DB !== 'undefined' && DB[depArrMatch[2]]) || ""; 
     }
-    const altMatch = raw.match(/ALTN\s+([A-Z]{4})/i);
+    
+    const altMatch = raw.match(/ALTN(?:ATE)?\s*[:\s]+\s*([A-Z]{4})/i) || raw.match(/ALTN\s+([A-Z]{4})/i) || raw.match(/ALTERNATE[:\s]+([A-Z]{4})/i);
     if (altMatch) { flightData[idx].alt = altMatch[1]; flightData[idx].altN = (typeof DB !== 'undefined' && DB[altMatch[1]]) || ""; }
-    const routeBlock = raw.match(/ROUTING:[\s\S]+?ROUTE ID:[\s\S]+?\n([\s\S]+?)\n\n/i);
+    
+    const distMatch = raw.match(/(?:GND|TRIP|GC|AIR)\s+DIST(?:ANCE)?:?\s*(\d+)/i) || raw.match(/DIST(?:ANCE)?:\s*(\d+)/i) || raw.match(/(\d+)\s*NM\s+(?:total|distance)/i);
+    if (distMatch) flightData[idx].dist = distMatch[1];
+
+    // ✨ 深度优化：智能识别公制高度并转换为3位英尺 FL
+    const flStepsMatch = raw.match(/FL\s+STEPS\s+([A-Z0-9\/]+)/i);
+    let maxFL = 0;
+
+    if (flStepsMatch) {
+        const stepsParts = flStepsMatch[1].split('/');
+        stepsParts.forEach(part => {
+            if (/^\d{3,5}$/.test(part)) {
+                let val = parseInt(part, 10);
+                // 如果是 4 位数字（如 0840、1020），SimBrief 通常表示“百米高度等级”（0840 => 8400m）
+                if (part.length === 4 && val > 600 && val < 1400) { 
+                        const meters = val * 10;          // 0840 -> 8400m
+                        const feet = meters * 3.28084;    // 转英尺
+                        val = Math.round(feet / 100);     // 英尺转 FL（百英尺）
+                } else if (part.length === 5) {
+                        val = Math.round(val / 100);      // 5位英尺高度（如 35000）转 FL
+                }
+                if (val > maxFL) maxFL = val;
+            }
+        });
+    } else {
+        // 捕获可选的 M（米）单位，如果是米，则先转英尺再转 FL
+        const crzMatch = raw.match(/(?:INITIAL\s+CRZ|CRZ\s+SYS|CRZ\s+ALT|CRZ|LVL):?\s*(?:FL)?(\d{2,5})(M?)/i);
+        if (crzMatch) {
+            let val = parseInt(crzMatch[1], 10);
+            const isMeters = crzMatch[2] && crzMatch[2].toUpperCase() === 'M';
+
+            if (isMeters) {
+                // 例如 10630M -> 约 34868ft -> FL349
+                const meters = val;
+                const feet = meters * 3.28084;
+                val = Math.round(feet / 100); // 转成以百英尺为单位的 FL
+            } else if (crzMatch[1].length === 5) {
+                // 5 位纯数字，视为英尺高度（如 35000），转为 FL
+                val = Math.round(val / 100);
+            }
+            maxFL = val;
+        }
+    }
+    if (maxFL > 0) {
+        // 统一处理为 3 位 FL（最多 999），多余位数截断
+        let flVal = Math.min(maxFL, 999);
+        let flStr = flVal.toString();
+        if (flStr.length > 3) flStr = flStr.slice(0, 3);
+        flightData[idx].crz = flStr;
+    }
+
+    const routeBlock = raw.match(/ROUTE ID:[\s\S]+?\n([\s\S]+?)(?:\n\n|\n-)/i) || raw.match(/ROUTING:[\s\S]+?\n([\s\S]+?)(?:\n\n|$)/i) || raw.match(/FULL ROUTE:?\s*\n([\s\S]+?)(?:\n\n|$)/i);
     if (routeBlock) {
         let fullRte = routeBlock[1].replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
-        let parts = fullRte.split(' ');
-        if (parts[0].includes('/')) flightData[idx].depRwy = parts[0].split('/')[1];
+        let parts = fullRte.split(/\s+/).filter(Boolean);
+        if (parts[0] && parts[0].includes('/')) flightData[idx].depRwy = parts[0].split('/')[1];
         if (parts.length > 1) flightData[idx].sid = parts[1];
         let lastPart = parts[parts.length - 1];
-        if (lastPart.includes('/')) flightData[idx].arrRwy = lastPart.split('/')[1];
+        if (lastPart && lastPart.includes('/')) flightData[idx].arrRwy = lastPart.split('/')[1];
         if (parts.length > 3) { let starCandidate = parts[parts.length - 2] === 'DCT' ? parts[parts.length - 3] : parts[parts.length - 2]; flightData[idx].star = starCandidate; }
-        flightData[idx].rte = parts.slice(1, -1).join(' ');
+        flightData[idx].rte = parts.slice(1, parts.length - 1).join(' ');
     }
-    const depWxMatch = raw.match(/Departure:[\s\S]+?SA\s+([\d]{6}\s+[\s\S]+?)(?=\n)/i);
+    
+    const depWxMatch = raw.match(/Departure:[\s\S]+?SA\s+([\d]{6}\s+[\s\S]+?)(?=\n)/i) || raw.match(/DEPARTURE[\s\S]+?METAR[:\s]*([A-Z0-9\s]+(?=\n|$))/i);
     if (depWxMatch) flightData[idx].depWx = depWxMatch[1].trim();
-    const arrWxMatch = raw.match(/Destination:[\s\S]+?SA\s+([\d]{6}\s+[\s\S]+?)(?=\n)/i);
+    
+    const arrWxMatch = raw.match(/Destination:[\s\S]+?SA\s+([\d]{6}\s+[\s\S]+?)(?=\n)/i) || raw.match(/DEST(?:INATION)?[\s\S]+?METAR[:\s]*([A-Z0-9\s]+(?=\n|$))/i);
     if (arrWxMatch) flightData[idx].arrWx = arrWxMatch[1].trim();
+    
     renderEditor(); draw(); 
 }
 
@@ -317,11 +643,34 @@ function resetAllMaps() {
     Object.keys(mapInstances).forEach(idx => {
         const map = mapInstances[idx];
         const layer = routeLayers[idx];
+        const altLayer = altLayers[idx];
         if (map && layer) {
             map.invalidateSize();
-            map.fitBounds(layer.getBounds(), { padding: [100, 100], animate: true });
+            let bounds = layer.getBounds();
+            if (altLayer) bounds = bounds.extend(altLayer.getBounds());
+            map.fitBounds(bounds, { padding: [100, 100], animate: true });
         }
     });
+}
+
+function toggleExportMapMode() {
+    exportWithoutMap = !exportWithoutMap;
+    syncMapExportToggleLabels();
+}
+
+function toggleFloatingPanel(event) {
+    const container = document.querySelector('.floating-controls');
+    if (!container) return;
+    // 避免内部按钮点击再次触发展开/折叠逻辑
+    if (event && event.target && event.target.tagName === 'BUTTON') return;
+    const isCollapsed = container.classList.contains('fc-collapsed');
+    if (isCollapsed) {
+        container.classList.remove('fc-collapsed');
+        container.classList.add('fc-expanded');
+    } else {
+        container.classList.remove('fc-expanded');
+        container.classList.add('fc-collapsed');
+    }
 }
 
 function updateCopyText(idx) {
@@ -370,14 +719,18 @@ function exportAsImage() {
     window.scrollTo(0, 0);
 
     target.classList.add('no-animation');
+    if (exportWithoutMap) target.classList.add('no-map');
     target.offsetHeight; 
 
     Object.keys(mapInstances).forEach(idx => {
         const map = mapInstances[idx];
         const layer = routeLayers[idx];
+        const altLayer = altLayers[idx];
         if (map && layer) {
             map.invalidateSize();
-            map.fitBounds(layer.getBounds(), { padding: [80, 80], animate: false });
+            let b = layer.getBounds();
+            if (altLayer) b = b.extend(altLayer.getBounds());
+            map.fitBounds(b, { padding: [80, 80], animate: false });
         }
     });
 
@@ -399,6 +752,7 @@ function exportAsImage() {
             alert("截图生成失败，请刷新页面重试。");
         }).finally(() => {
             target.classList.remove('no-animation');
+            target.classList.remove('no-map');
             btn.innerText = originalBtnText; btn.disabled = false;
         });
     }, 1500); 
@@ -413,14 +767,18 @@ function exportAsHTML() {
     window.scrollTo(0, 0);
 
     target.classList.add('no-animation');
+    if (exportWithoutMap) target.classList.add('no-map');
     target.offsetHeight; 
 
     Object.keys(mapInstances).forEach(idx => {
         const map = mapInstances[idx];
         const layer = routeLayers[idx];
+        const altLayer = altLayers[idx];
         if (map && layer) {
             map.invalidateSize();
-            map.fitBounds(layer.getBounds(), { padding: [80, 80], animate: false });
+            let b = layer.getBounds();
+            if (altLayer) b = b.extend(altLayer.getBounds());
+            map.fitBounds(b, { padding: [80, 80], animate: false });
         }
     });
 
@@ -544,6 +902,7 @@ function exportAsHTML() {
             alert("网页打包失败，请刷新页面重试。");
         }).finally(() => {
             target.classList.remove('no-animation');
+            target.classList.remove('no-map');
             btn.innerText = originalBtnText; btn.disabled = false;
         });
     }, 1500); 
@@ -562,6 +921,47 @@ function copyTextData(idx, btnEl) {
             btnEl.style.background = ""; 
         }, 2000);
     });
+}
+
+function updateDistCrz(idx, field, val) {
+    // 巡航高度与航程做输入规范化，保证位数与格式
+    if (field === 'crz') {
+        // 只保留数字，限制为最多 3 位
+        let digits = (val || '').toString().replace(/\D/g, '');
+        if (digits.length > 3) digits = digits.slice(0, 3);
+        flightData[idx][field] = digits;
+    } else if (field === 'dist') {
+        // 距离只保留数字
+        let digits = (val || '').toString().replace(/[^\d]/g, '');
+        flightData[idx][field] = digits;
+    } else {
+        flightData[idx][field] = val;
+    }
+    let leg = flightData[idx];
+    let rowEl = document.getElementById(`disp-metrics-divider-${idx}`);
+    let arcEl = document.getElementById(`disp-crz-arc-${idx}`);
+    let distSpan = document.getElementById(`disp-dist-val-${idx}`);
+    let crzText = document.getElementById(`disp-crz-text-${idx}`);
+    
+    // ✨ 核心调整：确保显示为 3 位数字的 FL 格式
+    let cleanCrz = leg.crz ? leg.crz.toString().replace(/^FL\s*/i, '').trim() : '';
+    if (cleanCrz.length > 3) cleanCrz = cleanCrz.substring(0, 3);
+    
+    // 更新距离显示
+    if (leg.dist) {
+        if (rowEl) rowEl.style.display = 'flex';
+        if (distSpan) distSpan.innerText = leg.dist + ' NM';
+    } else {
+        if (rowEl) rowEl.style.display = 'none';
+    }
+
+    // 更新巡航高度弧线显示（无空格，如 FL361）
+    if (cleanCrz) {
+        if (arcEl) arcEl.style.display = 'flex';
+        if (crzText) crzText.innerText = 'FL' + cleanCrz;
+    } else {
+        if (arcEl) arcEl.style.display = 'none';
+    }
 }
 
 function autoInput(idx, field, el) {
@@ -597,8 +997,9 @@ function updateData(idx, field, val) {
 
 function addNewLeg() {
     const lastLeg = flightData[flightData.length - 1];
-    flightData.push({ call: lastLeg.call, acft: lastLeg.acft, dep: lastLeg.arr, depN: lastLeg.arrN, depRwy: '', sid: '', depTrans: '', arr: '', arrN: '', arrTrans: '', star: '', arrRwy: '', alt: '', altN: '', rte: '', imgs: [], depWx: '', arrWx: '' });
-    renderEditor(); draw();
+    flightData.push({ call: lastLeg.call, acft: lastLeg.acft, dist: '', crz: '', dep: lastLeg.arr, depN: lastLeg.arrN, depRwy: '', sid: '', depTrans: '', arr: '', arrN: '', arrTrans: '', star: '', arrRwy: '', alt: '', altN: '', rte: '', imgs: [], depWx: '', arrWx: '' });
+    renderEditor(); 
+    draw();
 }
 
 function deleteLeg(idx) {
@@ -614,13 +1015,139 @@ function handleFiles(e, idx) {
 function deleteImg(legIdx, imgIdx) { flightData[legIdx].imgs.splice(imgIdx, 1); renderEditor(); draw(); }
 
 function renderEditor() {
-    const stack = document.getElementById('editorStack'); stack.innerHTML = '';
+    const stack = document.getElementById('editorStack'); 
+    stack.innerHTML = '';
+    
     flightData.forEach((leg, i) => {
-        const div = document.createElement('div'); div.className = 'leg-block';
-        let imgsHtml = (leg.imgs || []).map((img, imgIdx) => `<div class="img-thumb-wrapper"><img src="${img}" class="img-thumb"><button class="del-img-btn" onclick="deleteImg(${i}, ${imgIdx})">×</button></div>`).join('');
-        let deleteBtnHtml = flightData.length > 1 ? `<button onclick="deleteLeg(${i})" style="background:none; border:none; color:var(--warn); cursor:pointer; font-weight:800; font-size:12px; padding:0;">[删除段]</button>` : '';
-        let wxButtonsHtml = `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;"><div style="display:flex; gap:5px;"><button onclick="fetchMetar(${i}, 'dep')" style="flex:1; background:var(--accent); color:#fff; border:none; border-radius:6px; font-size:10px; padding:6px; cursor:pointer;">起飞天气</button><button onclick="deleteWx(${i}, 'dep')" style="background:var(--warn); color:#fff; border:none; border-radius:6px; font-size:10px; width:30px; cursor:pointer;">撤</button></div><div style="display:flex; gap:5px;"><button onclick="fetchMetar(${i}, 'arr')" style="flex:1; background:var(--accent); color:#fff; border:none; border-radius:6px; font-size:10px; padding:6px; cursor:pointer;">到达天气</button><button onclick="deleteWx(${i}, 'arr')" style="background:var(--warn); color:#fff; border:none; border-radius:6px; font-size:10px; width:30px; cursor:pointer;">撤</button></div></div>`;
-        div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;"><span style="font-size:12px; font-weight:800; color:#64748b;">航段 ${i + 1}</span>${deleteBtnHtml}</div><div style="display:flex; gap:10px;"><div style="flex:1;"><label>航班号</label><input type="text" value="${leg.call}" oninput="updateData(${i}, 'call', this.value)"></div><div style="flex:1;"><label>机型</label><input type="text" list="acft-list" value="${leg.acft}" oninput="updateData(${i}, 'acft', this.value)"></div></div><div style="display:flex; gap:10px;"><div style="flex:1;"><label>起飞 ICAO</label><input type="text" value="${leg.dep}" maxlength="4" oninput="autoInput(${i}, 'dep', this)"></div><div style="flex:1;"><label>到达 ICAO</label><input type="text" value="${leg.arr}" maxlength="4" oninput="autoInput(${i}, 'arr', this)"></div></div><div style="display:flex; gap:10px; margin-top:8px;"><input type="text" id="depN-${i}" value="${leg.depN}" oninput="updateData(${i}, 'depN', this.value)"><input type="text" id="arrN-${i}" value="${leg.arrN}" oninput="updateData(${i}, 'arrN', this.value)"></div>${wxButtonsHtml}<div style="display:flex; gap:10px; margin-top:5px;"><div style="flex:1;"><label>离场跑道</label><input type="text" value="${leg.depRwy}" oninput="updateData(${i}, 'depRwy', this.value)"></div><div style="flex:1.5;"><label>离场程序</label><input type="text" value="${leg.sid}" oninput="updateData(${i}, 'sid', this.value)"></div><div style="flex:1;"><label>离场过渡</label><input type="text" value="${leg.depTrans}" oninput="updateData(${i}, 'depTrans', this.value)"></div></div><div style="display:flex; gap:10px;"><div style="flex:1;"><label>进场跑道</label><input type="text" value="${leg.arrRwy}" oninput="updateData(${i}, 'arrRwy', this.value)"></div><div style="flex:1.5;"><label>进场程序</label><input type="text" value="${leg.star}" oninput="updateData(${i}, 'star', this.value)"></div><div style="flex:1;"><label>进场过渡</label><input type="text" value="${leg.arrTrans}" oninput="updateData(${i}, 'arrTrans', this.value)"></div></div><label>备降 ALTN</label><div style="display:flex; gap:10px;"><input type="text" value="${leg.alt}" maxlength="4" oninput="autoInput(${i}, 'alt', this)" style="flex:1;"><input type="text" id="altN-${i}" value="${leg.altN}" oninput="updateData(${i}, 'altN', this.value)" style="flex:2;"></div><label>航路信息</label><textarea rows="3" oninput="updateData(${i}, 'rte', this.value)">${leg.rte}</textarea><label>附件图片</label><input type="file" multiple accept="image/*" onchange="handleFiles(event, ${i})"><div class="img-manage-list">${imgsHtml}</div>`;
+        const div = document.createElement('div'); 
+        div.className = 'leg-block';
+        div.id = `editor-leg-${i}`;
+        
+        let imgsHtml = (leg.imgs || []).map((img, imgIdx) => `
+            <div class="img-thumb-wrapper">
+                <img src="${img}" class="img-thumb">
+                <button class="del-img-btn" onclick="deleteImg(${i}, ${imgIdx})">×</button>
+            </div>
+        `).join('');
+        
+        let deleteBtnHtml = flightData.length > 1 ? `
+            <button onclick="deleteLeg(${i})" style="background:none; border:none; color:var(--warn); cursor:pointer; font-weight:800; font-size:12px; padding:0;">[删除该段]</button>
+        ` : '';
+        
+        let wxButtonsHtml = `
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div style="display:flex; gap:5px;">
+                    <button onclick="fetchMetar(${i}, 'dep')" style="flex:1; background:var(--accent); color:#fff; border:none; border-radius:6px; font-size:11px; padding:8px; cursor:pointer;">起飞天气</button>
+                    <button onclick="deleteWx(${i}, 'dep')" style="background:var(--warn); color:#fff; border:none; border-radius:6px; font-size:11px; width:35px; cursor:pointer;">撤</button>
+                </div>
+                <div style="display:flex; gap:5px;">
+                    <button onclick="fetchMetar(${i}, 'arr')" style="flex:1; background:var(--accent); color:#fff; border:none; border-radius:6px; font-size:11px; padding:8px; cursor:pointer;">到达天气</button>
+                    <button onclick="deleteWx(${i}, 'arr')" style="background:var(--warn); color:#fff; border:none; border-radius:6px; font-size:11px; width:35px; cursor:pointer;">撤</button>
+                </div>
+            </div>
+        `;
+        
+        div.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <span style="font-size:14px; font-weight:900; color:var(--text);">✈️ 航段 ${i + 1}</span>
+                ${deleteBtnHtml}
+            </div>
+            
+            <div class="editor-group">
+                <div class="editor-group-title">基础信息</div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1.2;">
+                        <label>航班号</label>
+                        <input type="text" value="${leg.call}" oninput="updateData(${i}, 'call', this.value)">
+                    </div>
+                    <div style="flex:1.5;">
+                        <label>机型</label>
+                        <input type="text" list="acft-list" value="${leg.acft}" oninput="updateData(${i}, 'acft', this.value)">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="editor-group">
+                <div class="editor-group-title">航站与航程</div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label>起飞 ICAO</label>
+                        <input type="text" value="${leg.dep}" maxlength="4" oninput="autoInput(${i}, 'dep', this)">
+                    </div>
+                    <div style="flex:1;">
+                        <label>到达 ICAO</label>
+                        <input type="text" value="${leg.arr}" maxlength="4" oninput="autoInput(${i}, 'arr', this)">
+                    </div>
+                </div>
+                
+                <div style="display:flex; gap:10px; margin-top:8px;">
+                    <input type="text" id="depN-${i}" value="${leg.depN}" oninput="updateData(${i}, 'depN', this.value)">
+                    <input type="text" id="arrN-${i}" value="${leg.arrN}" oninput="updateData(${i}, 'arrN', this.value)">
+                </div>
+                
+                <div style="display:flex; gap:10px; margin-top:8px;">
+                    <div style="flex:1;">
+                        <label>航程 (NM)</label>
+                        <input type="text" value="${leg.dist || ''}" oninput="updateDistCrz(${i}, 'dist', this.value)">
+                    </div>
+                    <div style="flex:1;">
+                        <label>巡航高度 (FL)</label>
+                        <input type="text" value="${leg.crz || ''}" oninput="updateDistCrz(${i}, 'crz', this.value)">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="editor-group">
+                <div class="editor-group-title">航路与程序</div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label>离场跑道</label>
+                        <input type="text" value="${leg.depRwy}" oninput="updateData(${i}, 'depRwy', this.value)">
+                    </div>
+                    <div style="flex:1.5;">
+                        <label>离场程序</label>
+                        <input type="text" value="${leg.sid}" oninput="updateData(${i}, 'sid', this.value)">
+                    </div>
+                    <div style="flex:1;">
+                        <label>离场过渡</label>
+                        <input type="text" value="${leg.depTrans}" oninput="updateData(${i}, 'depTrans', this.value)">
+                    </div>
+                </div>
+                
+                <div style="display:flex; gap:10px; margin-top:8px;">
+                    <div style="flex:1;">
+                        <label>进场跑道</label>
+                        <input type="text" value="${leg.arrRwy}" oninput="updateData(${i}, 'arrRwy', this.value)">
+                    </div>
+                    <div style="flex:1.5;">
+                        <label>进场程序</label>
+                        <input type="text" value="${leg.star}" oninput="updateData(${i}, 'star', this.value)">
+                    </div>
+                    <div style="flex:1;">
+                        <label>进场过渡</label>
+                        <input type="text" value="${leg.arrTrans}" oninput="updateData(${i}, 'arrTrans', this.value)">
+                    </div>
+                </div>
+                
+                <label style="margin-top:12px;">备降场 (ALTN)</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" value="${leg.alt}" maxlength="4" oninput="autoInput(${i}, 'alt', this)" style="flex:1;">
+                    <input type="text" id="altN-${i}" value="${leg.altN}" oninput="updateData(${i}, 'altN', this.value)" style="flex:2;">
+                </div>
+                
+                <label style="margin-top:12px;">航路信息 (ROUTE)</label>
+                <textarea rows="3" oninput="updateData(${i}, 'rte', this.value)">${leg.rte}</textarea>
+            </div>
+            
+            <div class="editor-group">
+                <div class="editor-group-title">气象与附件</div>
+                ${wxButtonsHtml}
+                
+                <label style="margin-top:15px;">添加参考图</label>
+                <input type="file" multiple accept="image/*" onchange="handleFiles(event, ${i})">
+                <div class="img-manage-list">${imgsHtml}</div>
+            </div>
+        `;
         stack.appendChild(div);
     });
 }
@@ -629,24 +1156,33 @@ function initMapForLeg(idx) {
     const depICAO = flightData[idx].dep; const arrICAO = flightData[idx].arr;
     const container = document.getElementById(`map-placeholder-${idx}`);
     if (!container) return;
-    let depP, arrP;
+    let depP, arrP, altP;
     if (typeof COORDS_DB !== 'undefined' && COORDS_DB[depICAO]) { depP = { lat: COORDS_DB[depICAO][0], lon: COORDS_DB[depICAO][1] }; } else if (airportGeoData[depICAO]) { depP = { lat: airportGeoData[depICAO].lat, lon: airportGeoData[depICAO].lon }; }
     if (typeof COORDS_DB !== 'undefined' && COORDS_DB[arrICAO]) { arrP = { lat: COORDS_DB[arrICAO][0], lon: COORDS_DB[arrICAO][1] }; } else if (airportGeoData[arrICAO]) { arrP = { lat: airportGeoData[arrICAO].lat, lon: airportGeoData[arrICAO].lon }; }
+    const altICAO = flightData[idx].alt;
+    if (altICAO) {
+        if (typeof COORDS_DB !== 'undefined' && COORDS_DB[altICAO]) { altP = { lat: COORDS_DB[altICAO][0], lon: COORDS_DB[altICAO][1] }; } 
+        else if (airportGeoData[altICAO]) { altP = { lat: airportGeoData[altICAO].lat, lon: airportGeoData[altICAO].lon }; }
+    }
     
     if (!depP || !arrP) { container.innerHTML = ""; return; }
     
-    const currentKey = `${depICAO}-${arrICAO}`;
+    const currentKey = `${depICAO}-${arrICAO}-${altICAO || ''}`;
     if (lastLegICAO[idx] === currentKey && mapDoms[idx]) { 
         container.appendChild(mapDoms[idx]); 
         if (mapInstances[idx]) {
              mapInstances[idx].invalidateSize();
-             if(routeLayers[idx]) mapInstances[idx].fitBounds(routeLayers[idx].getBounds(), { padding: [80, 80], animate: false });
+             const rl = routeLayers[idx];
+             if (rl) {
+                 let b = rl.getBounds();
+                 if (altLayers[idx]) b = b.extend(altLayers[idx].getBounds());
+                 mapInstances[idx].fitBounds(b, { padding: [80, 80], animate: false });
+             }
         }
         return; 
     }
     
     if (mapInstances[idx]) mapInstances[idx].remove();
-    // 强制清理旧 DOM，防止残骸导致变灰
     container.innerHTML = ''; 
     
     const mapDiv = document.createElement('div'); mapDiv.className = 'map-container';
@@ -657,8 +1193,10 @@ function initMapForLeg(idx) {
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', crossOrigin: true }).addTo(map);
 
     const pts = [[depP.lat, depP.lon], [arrP.lat, arrP.lon]];
-    L.circleMarker(pts[0], { radius: 5, color: '#2563eb', fillOpacity: 1 }).addTo(map);
-    L.circleMarker(pts[1], { radius: 5, color: '#2563eb', fillOpacity: 1 }).addTo(map);
+    // 起飞机场点：洋红色
+    L.circleMarker(pts[0], { radius: 5, color: '#db2777', fillColor: '#db2777', fillOpacity: 1 }).addTo(map);
+    // 到达机场点：与 STAR 相同的绿色
+    L.circleMarker(pts[1], { radius: 5, color: '#059669', fillColor: '#059669', fillOpacity: 1 }).addTo(map);
     
     const offsetX = pts[1][1] - pts[0][1]; const offsetY = pts[1][0] - pts[0][0];
     const r = Math.sqrt(Math.pow(offsetX, 2) + Math.pow(offsetY, 2)); const theta = Math.atan2(offsetY, offsetX);
@@ -669,12 +1207,45 @@ function initMapForLeg(idx) {
         const y = (1-t)*(1-t)*pts[0][1] + 2*(1-t)*t*controlPoint[1] + t*t*pts[1][1];
         curvePoints.push([x, y]);
     }
-    const polyline = L.polyline(curvePoints, { color: '#2563eb', weight: 3, dashArray: '5, 10', opacity: 0.6 }).addTo(map);
+    const polyline = L.polyline(curvePoints, { color: '#2563eb', weight: 3, dashArray: '5, 10', opacity: 0.7 }).addTo(map);
+
+    // 沿曲线均匀分布多个指向目的地的箭头（约 6–8 个）
+    const numArrows = Math.min(8, Math.max(5, Math.floor(curvePoints.length / 12)));
+    for (let a = 1; a <= numArrows; a++) {
+        const t = a / (numArrows + 1);
+        const arrowIndex = Math.floor(t * (curvePoints.length - 1));
+        const arrowLatLng = curvePoints[arrowIndex];
+        const i0 = Math.max(0, arrowIndex - 2);
+        const i1 = Math.min(curvePoints.length - 1, arrowIndex + 2);
+        const dx = curvePoints[i1][1] - curvePoints[i0][1];
+        const dy = curvePoints[i1][0] - curvePoints[i0][0];
+        const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+        const arrowHtml = `<div class="route-arrow" style="transform: rotate(${angleDeg}deg);"></div>`;
+        const arrowIcon = L.divIcon({
+            className: 'route-arrow-icon',
+            html: arrowHtml,
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
+        });
+        L.marker(arrowLatLng, { icon: arrowIcon, interactive: false }).addTo(map);
+    }
+
+    // 备降场路线：从到达机场连到备降场，与 ALTERNATE 颜色一致
+    let altLine = null;
+    if (altP) {
+        const altPts = [[arrP.lat, arrP.lon], [altP.lat, altP.lon]];
+        altLine = L.polyline(altPts, { color: '#dc2626', weight: 2, dashArray: '4, 6', opacity: 0.8 }).addTo(map);
+        L.circleMarker([altP.lat, altP.lon], { radius: 5, color: '#dc2626', fillColor: '#dc2626', fillOpacity: 1 }).addTo(map);
+    }
+
+    let bounds = polyline.getBounds();
+    if (altLine) {
+        bounds = bounds.extend(altLine.getBounds());
+    }
+    map.fitBounds(bounds, { padding: [80, 80], animate: false });
+
+    mapInstances[idx] = map; routeLayers[idx] = polyline; altLayers[idx] = altLine || null; lastLegICAO[idx] = currentKey;
     
-    map.fitBounds(polyline.getBounds(), { padding: [80, 80], animate: false });
-    mapInstances[idx] = map; routeLayers[idx] = polyline; lastLegICAO[idx] = currentKey;
-    
-    // 延时刷新解决可能出现的灰屏
     setTimeout(() => { map.invalidateSize(); }, 50);
 }
 
@@ -692,8 +1263,39 @@ function draw() {
         let dWx = leg.depWx ? `<div class="weather-box"><span class="weather-label">DEPARTURE METAR (${leg.dep})</span><div class="weather-code">${leg.depWx}</div></div>` : '';
         let aWx = leg.arrWx ? `<div class="weather-box"><span class="weather-label">ARRIVAL METAR (${leg.arr})</span><div class="weather-code">${leg.arrWx}</div></div>` : '';
         
+        let cleanCrz = leg.crz ? leg.crz.replace(/^FL\s*/i, '').trim() : '';
+        const hasMultiLegs = flightData.length > 1;
+        const legNoLabel = hasMultiLegs ? ` ${i + 1}` : '';
+
+        // ✨ 核心调整：距离栏完美垂直对齐
+        let distHtml = leg.dist ? `
+        <div class="metrics-divider" id="disp-metrics-divider-${i}">
+            <div class="m-line"></div>
+            <div class="m-data-area">
+                <span class="m-label-sub">DIST</span>
+                <span class="m-val-sub val-dist" id="disp-dist-val-${i}">${leg.dist} NM</span>
+            </div>
+            <div class="m-line"></div>
+        </div>` : 
+        `<div class="metrics-divider" id="disp-metrics-divider-${i}" style="display:none;">
+            <div class="m-line"></div>
+            <div class="m-data-area">
+                <span class="m-label-sub">DIST</span>
+                <span class="m-val-sub val-dist" id="disp-dist-val-${i}"></span>
+            </div>
+            <div class="m-line"></div>
+        </div>`;
+
+        let arcHtml = `
+        <div class="crz-arc-container" id="disp-crz-arc-${i}" style="display: ${cleanCrz ? 'flex' : 'none'}">
+             <svg class="crz-arc-svg" viewBox="0 0 400 55" preserveAspectRatio="none">
+                 <path d="M 60 45 Q 200 8 340 45" /> </svg>
+             <div class="crz-arc-text" id="disp-crz-text-${i}">FL${cleanCrz}</div>
+        </div>`;
+
         zone.innerHTML += `
-        <div class="card">
+        <div class="card" id="card-leg-${i}">
+            ${arcHtml}
             <div class="header">
                 <div class="station align-left"><span class="m-title">DEPARTURE</span><div class="icao" id="disp-dep-${i}">${leg.dep || ''}</div><div class="cn-name" id="disp-depN-${i}">${leg.depN || ''}</div></div>
                 <div class="route-visual">
@@ -703,23 +1305,23 @@ function draw() {
                 <div class="station align-right"><span class="m-title">ARRIVAL</span><div class="icao" id="disp-arr-${i}">${leg.arr || ''}</div><div class="cn-name" id="disp-arrN-${i}">${leg.arrN || ''}</div></div>
             </div>
             
-            <div class="meta-grid">
-                <div class="meta-item align-left"><span class="m-title">AIRCRAFT</span><div class="m-val" id="disp-acft-${i}">${leg.acft || ''}</div></div>
-                <div class="meta-item align-center"><span class="m-title">ALTERNATE</span><div class="m-val" style="color:var(--warn)" id="disp-alt-${i}">${leg.alt || ''}</div></div>
-                <div class="meta-item align-center"><span class="m-title">STATUS</span><div class="m-val" style="color:var(--success)">RELEASED</div></div>
-                <div class="meta-item align-right"><span class="m-title">UTC TIME</span><div class="m-val">${new Date().getUTCHours().toString().padStart(2,'0')}:${new Date().getUTCMinutes().toString().padStart(2,'0')}Z</div></div>
+            ${distHtml}             <div class="meta-grid">
+                <div class="meta-item align-left"><span class="m-title meta-acft">AIRCRAFT</span><div class="m-val" id="disp-acft-${i}">${leg.acft || ''}</div></div>
+                <div class="meta-item align-center"><span class="m-title meta-altn">ALTERNATE</span><div class="m-val" style="color:var(--warn)" id="disp-alt-${i}">${leg.alt || ''}</div></div>
+                <div class="meta-item align-center"><span class="m-title">STATUS</span><div class="m-val" style="color:#22c55e">RELEASED</div></div>
+                <div class="meta-item align-right"><span class="m-title meta-utc">UTC TIME</span><div class="m-val">${new Date().getUTCHours().toString().padStart(2,'0')}:${new Date().getUTCMinutes().toString().padStart(2,'0')}Z</div></div>
             </div>
 
             <div class="route-zone">
                 <div class="proc-grid">
-                    <div class="proc-box"><div class="proc-label">DEP RWY</div><div class="proc-val" id="disp-depRwy-${i}">${leg.depRwy || ''}</div></div>
+                    <div class="proc-box"><div class="proc-label">DEP RWY</div><div class="proc-val rwy-val" id="disp-depRwy-${i}">${leg.depRwy || ''}</div></div>
                     <div class="proc-box"><div class="proc-label">SID</div><div class="proc-val" style="color: #db2777;" id="disp-sid-${i}">${leg.sid || ''}</div></div>
                     <div class="proc-box"><div class="proc-label">TRANS</div><div class="proc-val" style="color: #9333ea;" id="disp-depTrans-${i}">${leg.depTrans || ''}</div></div>
                     <div class="proc-box"><div class="proc-label">STAR</div><div class="proc-val" style="color: #059669;" id="disp-star-${i}">${leg.star || ''}</div></div>
                     <div class="proc-box"><div class="proc-label">TRANS</div><div class="proc-val" style="color: #ea580c;" id="disp-arrTrans-${i}">${leg.arrTrans || ''}</div></div>
-                    <div class="proc-box"><div class="proc-label">ARR RWY</div><div class="proc-val" id="disp-arrRwy-${i}">${leg.arrRwy || ''}</div></div>
+                    <div class="proc-box"><div class="proc-label">ARR RWY</div><div class="proc-val rwy-val" id="disp-arrRwy-${i}">${leg.arrRwy || ''}</div></div>
                 </div>
-                <div class="route-title">ENROUTE BRIEFING</div><div class="route-text" id="disp-rte-${i}">${leg.rte || ''}</div>
+                <div class="route-title">ENROUTE BRIEFING${legNoLabel}</div><div class="route-text" id="disp-rte-${i}">${leg.rte || ''}</div>
                 <div id="disp-depWx-container-${i}">${dWx}</div>
                 <div id="disp-arrWx-container-${i}">${aWx}</div>
             </div>
@@ -736,7 +1338,7 @@ function draw() {
 
         copyZone.innerHTML += `
         <div class="copy-section">
-            <h3>ENROUTE BRIEFING
+            <h3>ENROUTE BRIEFING${hasMultiLegs ? ' ' + (i + 1) : ''}
                 <button class="copy-btn" onclick="copyTextData(${i}, this)">一键复制</button>
             </h3>
             <textarea class="copy-textarea" id="copy-text-area-${i}" readonly>${copyTextContent}</textarea>
